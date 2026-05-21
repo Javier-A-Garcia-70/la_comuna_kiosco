@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { traducirError } from '../lib/errores';
 
 const hoyISO = () => new Date().toISOString().split('T')[0];
+
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 const METODO_COLORS = {
   efectivo:      'bg-emerald-50 text-emerald-600',
@@ -11,12 +13,49 @@ const METODO_COLORS = {
 };
 
 export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, mostrarNotif }) {
+  const hoy = new Date();
   const [tab, setTab]           = useState('vivo');
-  const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const [desde, setDesde]       = useState(hoyISO());
   const [hasta, setHasta]       = useState(hoyISO());
   const [rango, setRango]       = useState(null);
   const [cargando, setCargando] = useState(false);
+
+  // Tab Evento
+  const [mesVisto, setMesVisto]           = useState({ year: hoy.getFullYear(), month: hoy.getMonth() });
+  const [eventosDelMes, setEventosDelMes] = useState([]);
+  const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
+  const [ventasDelEvento, setVentasDelEvento]       = useState(null);
+  const [cargandoEvento, setCargandoEvento]         = useState(false);
+
+  useEffect(() => {
+    if (tab !== 'evento') return;
+    const { year, month } = mesVisto;
+    const desde = `${year}-${String(month+1).padStart(2,'0')}-01`;
+    const hasta  = new Date(year, month+1, 0).toISOString().split('T')[0];
+    supabase.from('eventos').select('*').gte('fecha', desde).lte('fecha', hasta).order('fecha').order('hora_inicio')
+      .then(({ data }) => setEventosDelMes(data || []));
+  }, [mesVisto, tab]);
+
+  const seleccionarEvento = async (ev) => {
+    setEventoSeleccionado(ev);
+    const esHoy = ev.fecha === hoyISO();
+    if (esHoy) { setVentasDelEvento(null); return; }
+    setCargandoEvento(true);
+    const { data } = await supabase.from('ventas').select('*').gte('fecha', ev.fecha+'T00:00:00').lte('fecha', ev.fecha+'T23:59:59');
+    setCargandoEvento(false);
+    setVentasDelEvento(data || []);
+  };
+
+  const irMes = (delta) => {
+    setMesVisto(prev => {
+      let m = prev.month + delta;
+      let y = prev.year;
+      if (m > 11) { m = 0; y++; }
+      if (m < 0)  { m = 11; y--; }
+      return { year: y, month: m };
+    });
+    setEventoSeleccionado(null);
+  };
 
   const cajaHoy = ventas.reduce((a,v) => a+(v.total||0), 0);
 
@@ -134,14 +173,17 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
 
       {tab==='evento' && (() => {
         const ev = eventoSeleccionado;
-        const ventasEvento = ev ? ventas.filter(v => {
-          const hora = new Date(v.fecha).getHours() * 60 + new Date(v.fecha).getMinutes();
+        const esHoy = ev?.fecha === hoyISO();
+        const fuenteVentas = esHoy ? ventas : (ventasDelEvento || []);
+        const ventasEvento = ev ? fuenteVentas.filter(v => {
+          const d = new Date(v.fecha);
+          const min = d.getHours()*60 + d.getMinutes();
           const [h1,m1] = ev.hora_inicio.split(':').map(Number);
           const [h2,m2] = ev.hora_fin.split(':').map(Number);
-          return hora >= h1*60+m1 && hora <= h2*60+m2;
+          return min >= h1*60+m1 && min <= h2*60+m2;
         }) : [];
         const totalEvento = ventasEvento.reduce((a,v) => a+(v.total||0), 0);
-        const activo = ev && (() => {
+        const activo = ev?.fecha === hoyISO() && (() => {
           const min = new Date().getHours()*60+new Date().getMinutes();
           const [h1,m1] = ev.hora_inicio.split(':').map(Number);
           const [h2,m2] = ev.hora_fin.split(':').map(Number);
@@ -150,26 +192,53 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
 
         return (
           <div className="space-y-3">
-            {/* Selector de evento */}
-            {eventos.length > 0 ? (
-              <div className="bg-white rounded-2xl p-4 border border-stone-100 space-y-2">
-                <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Eventos de hoy</p>
-                {eventos.map(e => (
-                  <button key={e.id} onClick={() => setEventoSeleccionado(e)}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors flex items-center justify-between ${eventoSeleccionado?.id===e.id ? 'bg-brand-50 text-brand-500 font-medium' : 'text-stone-600 hover:bg-stone-50'}`}>
-                    <span>{e.nombre}</span>
-                    <span className="text-xs text-stone-400">{e.hora_inicio.slice(0,5)}–{e.hora_fin.slice(0,5)}</span>
-                  </button>
-                ))}
+            {/* Navegación por mes */}
+            <div className="bg-white rounded-2xl border border-stone-100 flex items-center justify-between px-4 py-3">
+              <button onClick={() => irMes(-1)} className="w-8 h-8 flex items-center justify-center rounded-xl text-stone-400 active:bg-stone-50">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span className="font-medium text-stone-700 text-sm">{MESES[mesVisto.month]} {mesVisto.year}</span>
+              <button onClick={() => irMes(1)} disabled={mesVisto.year === hoy.getFullYear() && mesVisto.month >= hoy.getMonth()} className="w-8 h-8 flex items-center justify-center rounded-xl text-stone-400 active:bg-stone-50 disabled:opacity-30">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+
+            {/* Lista de eventos del mes */}
+            {eventosDelMes.length === 0 ? (
+              <div className="text-center py-10 text-stone-300">
+                <p className="text-3xl mb-2">🎉</p>
+                <p className="text-sm">Sin eventos este mes</p>
               </div>
             ) : (
-              <div className="text-center py-12 text-stone-300">
-                <p className="text-3xl mb-2">🎉</p>
-                <p className="text-sm">Sin eventos hoy</p>
+              <div className="bg-white rounded-2xl border border-stone-100 divide-y divide-stone-50">
+                {eventosDelMes.map(e => {
+                  const esActivo = e.fecha === hoyISO() && (() => {
+                    const min = new Date().getHours()*60+new Date().getMinutes();
+                    const [h1,m1] = e.hora_inicio.split(':').map(Number);
+                    const [h2,m2] = e.hora_fin.split(':').map(Number);
+                    return min >= h1*60+m1 && min <= h2*60+m2;
+                  })();
+                  return (
+                    <button key={e.id} onClick={() => seleccionarEvento(e)}
+                      className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors ${eventoSeleccionado?.id===e.id ? 'bg-brand-50' : 'hover:bg-stone-50'}`}>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium ${eventoSeleccionado?.id===e.id ? 'text-brand-500' : 'text-stone-700'}`}>{e.nombre}</span>
+                          {esActivo && <span className="bg-emerald-100 text-emerald-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">En curso</span>}
+                        </div>
+                        <span className="text-xs text-stone-400">{e.fecha.slice(8,10)}/{e.fecha.slice(5,7)} · {e.hora_inicio.slice(0,5)}–{e.hora_fin.slice(0,5)}</span>
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d4856a" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
-            {ev && (
+            {/* Detalle del evento seleccionado */}
+            {cargandoEvento && <p className="text-center text-stone-400 text-sm py-4">Cargando...</p>}
+
+            {ev && !cargandoEvento && (
               <>
                 <div className="bg-white rounded-2xl p-4 border border-stone-100">
                   <div className="flex items-center gap-2 mb-1">
@@ -189,14 +258,12 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
                     return a;
                   }, {});
                   const itemsVendidos = ventasEvento.flatMap(v => v.items||[]).reduce((a,i) => {
-                    const key = i.nombre;
-                    if (!a[key]) a[key] = { nombre:i.nombre, cantidad:0, total:0 };
-                    a[key].cantidad += i.cantidad;
-                    a[key].total += i.precio * i.cantidad;
+                    if (!a[i.nombre]) a[i.nombre] = { nombre:i.nombre, cantidad:0, total:0 };
+                    a[i.nombre].cantidad += i.cantidad;
+                    a[i.nombre].total += i.precio * i.cantidad;
                     return a;
                   }, {});
                   const itemsOrdenados = Object.values(itemsVendidos).sort((a,b) => b.total-a.total);
-
                   return (
                     <>
                       {Object.keys(porMetodoEv).length > 0 && (
@@ -218,17 +285,13 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
                           </div>
                         </div>
                       )}
-
                       {itemsOrdenados.length > 0 && (
                         <div className="bg-white rounded-2xl p-4 border border-stone-100">
                           <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">Productos vendidos</p>
                           <div className="space-y-2">
                             {itemsOrdenados.map(i => (
                               <div key={i.nombre} className="flex items-center justify-between">
-                                <div>
-                                  <span className="text-sm text-stone-600">{i.nombre}</span>
-                                  <span className="text-xs text-stone-400 ml-1.5">×{i.cantidad}</span>
-                                </div>
+                                <div><span className="text-sm text-stone-600">{i.nombre}</span><span className="text-xs text-stone-400 ml-1.5">×{i.cantidad}</span></div>
                                 <span className="font-bold text-stone-700 text-sm">${i.total.toLocaleString()}</span>
                               </div>
                             ))}

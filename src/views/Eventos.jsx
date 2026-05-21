@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { traducirError } from '../lib/errores';
 
 const CATS_BEBIDA = ['cerveza', 'vino', 'bebida'];
 const FORM_VACIO = { nombre: '', hora_inicio: '', hora_fin: '', precio_entrada: '', comidas: [], ajustes: {} };
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 function estaActivo(ev) {
   const ahora = new Date();
@@ -14,12 +15,42 @@ function estaActivo(ev) {
 }
 
 export default function VistaEventos({ productos, eventos, mostrarNotif }) {
+  const hoy = new Date();
+  const [mesVisto, setMesVisto] = useState({ year: hoy.getFullYear(), month: hoy.getMonth() });
+  const [eventosDelMes, setEventosDelMes] = useState([]);
   const [form, setForm] = useState(FORM_VACIO);
   const [editandoId, setEditandoId] = useState(null);
   const [abierto, setAbierto] = useState(false);
   const [nuevaComida, setNuevaComida] = useState({ nombre: '', precio: '' });
   const [cargando, setCargando] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
+
+  const cargarMes = async ({ year, month }) => {
+    const desde = `${year}-${String(month+1).padStart(2,'0')}-01`;
+    const hasta  = new Date(year, month+1, 0).toISOString().split('T')[0];
+    const { data } = await supabase.from('eventos').select('*').gte('fecha', desde).lte('fecha', hasta).order('fecha').order('hora_inicio');
+    setEventosDelMes(data || []);
+  };
+
+  useEffect(() => { cargarMes(mesVisto); }, [mesVisto]);
+
+  // Refrescar cuando cambian eventos de hoy (realtime de App.jsx)
+  useEffect(() => {
+    const { year, month } = mesVisto;
+    if (year === hoy.getFullYear() && month === hoy.getMonth()) {
+      cargarMes(mesVisto);
+    }
+  }, [eventos]);
+
+  const irMes = (delta) => {
+    setMesVisto(prev => {
+      let m = prev.month + delta;
+      let y = prev.year;
+      if (m > 11) { m = 0; y++; }
+      if (m < 0)  { m = 11; y--; }
+      return { year: y, month: m };
+    });
+  };
 
   const bebidas = useMemo(
     () => productos.filter(p => CATS_BEBIDA.includes(p.categoria) && p.stock > 0)
@@ -101,6 +132,7 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
     setCargando(false);
     if (error) { setErrorForm(traducirError(error)); return; }
     mostrarNotif('ok', editandoId ? 'Evento actualizado.' : 'Evento creado.');
+    cargarMes(mesVisto);
     cerrar();
   };
 
@@ -108,7 +140,7 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
     if (!confirm(`¿Eliminar el evento "${nombre}"?`)) return;
     const { error } = await supabase.from('eventos').delete().eq('id', id);
     if (error) mostrarNotif('error', traducirError(error));
-    else mostrarNotif('ok', 'Evento eliminado.');
+    else { mostrarNotif('ok', 'Evento eliminado.'); cargarMes(mesVisto); }
   };
 
   return (
@@ -120,44 +152,45 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
         <span className="text-lg leading-none">+</span> Nuevo evento
       </button>
 
-      {eventos.length === 0 && (
+      {/* Navegación por mes */}
+      <div className="bg-white rounded-2xl border border-stone-100 flex items-center justify-between px-4 py-3">
+        <button onClick={() => irMes(-1)} className="w-8 h-8 flex items-center justify-center rounded-xl text-stone-400 active:bg-stone-50">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span className="font-medium text-stone-700 text-sm">{MESES[mesVisto.month]} {mesVisto.year}</span>
+        <button onClick={() => irMes(1)} disabled={mesVisto.year === hoy.getFullYear() && mesVisto.month >= hoy.getMonth()} className="w-8 h-8 flex items-center justify-center rounded-xl text-stone-400 active:bg-stone-50 disabled:opacity-30">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+
+      {eventosDelMes.length === 0 && (
         <div className="text-center py-12 text-stone-300">
           <p className="text-3xl mb-2">🎉</p>
-          <p className="text-sm">Sin eventos para hoy</p>
+          <p className="text-sm">Sin eventos este mes</p>
         </div>
       )}
 
-      {eventos.map(ev => {
-        const activo = estaActivo(ev);
+      {eventosDelMes.map(ev => {
+        const activo = ev.fecha === new Date().toISOString().split('T')[0] && estaActivo(ev);
+        const esHoy  = ev.fecha === new Date().toISOString().split('T')[0];
         return (
           <div key={ev.id} className="bg-white rounded-2xl p-4 border border-stone-100 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-medium text-stone-700 text-sm">{ev.nombre}</p>
-                  {activo && (
-                    <span className="bg-emerald-100 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Activo</span>
-                  )}
+                  {activo && <span className="bg-emerald-100 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Activo</span>}
                 </div>
                 <p className="text-stone-400 text-xs mt-0.5">
+                  {!esHoy && `${ev.fecha.slice(8,10)}/${ev.fecha.slice(5,7)} · `}
                   {ev.hora_inicio.slice(0,5)} – {ev.hora_fin.slice(0,5)}
                   {ev.comidas?.length > 0 && ` · ${ev.comidas.length} comida${ev.comidas.length > 1 ? 's' : ''}`}
-                  {ev.ajustes?.length > 0 && ` · ${ev.ajustes.length} precio${ev.ajustes.length > 1 ? 's' : ''} ajustado${ev.ajustes.length > 1 ? 's' : ''}`}
+                  {ev.ajustes?.length > 0 && ` · ${ev.ajustes.length} ajuste${ev.ajustes.length > 1 ? 's' : ''}`}
                 </p>
               </div>
               <div className="flex gap-1.5 shrink-0">
-                <button
-                  onClick={() => abrirEdicion(ev)}
-                  className="bg-stone-50 text-stone-500 font-medium text-xs rounded-xl px-3 py-2 active:scale-95"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => eliminar(ev.id, ev.nombre)}
-                  className="bg-red-50 text-red-400 font-medium text-xs rounded-xl px-3 py-2 active:scale-95"
-                >
-                  ×
-                </button>
+                <button onClick={() => abrirEdicion(ev)} className="bg-stone-50 text-stone-500 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">Editar</button>
+                <button onClick={() => eliminar(ev.id, ev.nombre)} className="bg-red-50 text-red-400 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">×</button>
               </div>
             </div>
           </div>

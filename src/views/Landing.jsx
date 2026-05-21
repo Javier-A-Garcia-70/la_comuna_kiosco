@@ -22,11 +22,8 @@ export default function Landing({ onGuest }) {
     <div className="min-h-dvh bg-cream flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-xs space-y-5">
 
-        <div className="space-y-1">
-          <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center text-2xl">
-            🎪
-          </div>
-          <h1 className="text-2xl font-bold text-stone-800 tracking-tight">Centro Cultural</h1>
+        <div className="space-y-3 flex flex-col items-center">
+          <img src="/logo_portada.png" alt="La Comuna" className="h-12 object-contain" />
           <p className="text-stone-400 text-sm">Sistema de ventas</p>
         </div>
 
