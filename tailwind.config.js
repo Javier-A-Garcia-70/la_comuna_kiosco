@@ -1,18 +1,19 @@
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: { sans: ['Outfit', 'sans-serif'] },
       colors: {
         brand: {
-          50:  '#F5EDE8',
-          100: '#EDD9CF',
-          300: '#E8A98C',
-          400: '#D4856A',
-          500: '#C4755A',
-          600: '#A85E45',
+          50:  'var(--accent-surface)',
+          100: 'var(--accent-muted)',
+          300: 'var(--accent-light)',
+          400: 'var(--accent)',
+          500: 'var(--accent-dark)',
+          600: 'var(--accent-darker)',
         },
-        cream: '#F5F3EF',
+        cream: 'var(--bg)',
       },
     },
   },

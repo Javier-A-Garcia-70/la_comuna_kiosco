@@ -29,6 +29,12 @@ export default function App() {
   const [notif, setNotif] = useState(null);
   const [eventos, setEventos] = useState([]);
   const [eventoActivo, setEventoActivo] = useState(null);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('dark') === '1');
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('dark', darkMode ? '1' : '0');
+  }, [darkMode]);
 
   const mostrarNotif = useCallback((tipo, texto) => setNotif({ tipo, texto }), []);
   const cerrarNotif  = useCallback(() => setNotif(null), []);
@@ -154,8 +160,14 @@ export default function App() {
           </svg>
         </button>
         <span className="font-medium text-stone-700 text-base">{titulo}</span>
-        <div className="w-9 h-9 rounded-xl bg-brand-400 flex items-center justify-center text-white text-xs font-bold">
-          {userMode === 'admin' ? 'AD' : 'G'}
+        <div className="flex items-center gap-2">
+          <button onClick={() => setDarkMode(d => !d)}
+            className="w-9 h-9 rounded-xl bg-cream flex items-center justify-center text-stone-500 active:scale-95 transition-transform text-base">
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+          <div className="w-9 h-9 rounded-xl bg-brand-400 flex items-center justify-center text-white text-xs font-bold">
+            {userMode === 'admin' ? 'AD' : 'G'}
+          </div>
         </div>
       </header>
 

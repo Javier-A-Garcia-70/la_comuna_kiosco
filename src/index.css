@@ -6,3 +6,59 @@ html, body {
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ── Light mode ── */
+:root {
+  --bg:             #F5F3EF;
+  --surface:        #FFFFFF;
+  --surface-raised: #F0EDE8;
+  --accent-surface: #F5EDE8;
+  --accent-muted:   #EDD9CF;
+  --accent-light:   #E8A98C;
+  --accent:         #D4856A;
+  --accent-dark:    #C4755A;
+  --accent-darker:  #A85E45;
+  --border:         #E8E4DE;
+}
+
+/* ── Dark mode ── */
+.dark {
+  --bg:             #1A1612;
+  --surface:        #26211C;
+  --surface-raised: #322A22;
+  --accent-surface: #2A1E17;
+  --accent-muted:   #3A2518;
+  --accent-light:   #C4724E;
+  --accent:         #C4724E;
+  --accent-dark:    #8A5238;
+  --accent-darker:  #6B3D27;
+  --border:         #3A3028;
+}
+
+/* ── Dark mode overrides para colores estándar de Tailwind ── */
+.dark .bg-white          { background-color: var(--surface); }
+.dark .bg-stone-50       { background-color: var(--surface-raised); }
+.dark .bg-stone-100      { background-color: var(--surface-raised); }
+.dark .border-stone-100  { border-color: var(--border); }
+.dark .divide-stone-50   > * + * { border-color: var(--border); }
+
+.dark .text-stone-800    { color: #EDE5D0; }
+.dark .text-stone-700    { color: #EDE5D0; }
+.dark .text-stone-600    { color: #C4B89A; }
+.dark .text-stone-500    { color: #C4B89A; }
+.dark .text-stone-400    { color: #9A8E7A; }
+.dark .text-stone-300    { color: #6B5E4A; }
+
+.dark .bg-emerald-50     { background-color: #1A2E26; }
+.dark .text-emerald-600  { color: #3BAE8A; }
+.dark .text-emerald-500  { color: #3BAE8A; }
+.dark .bg-emerald-500    { background-color: #1E6B52; }
+.dark .bg-emerald-100    { background-color: #1A2E26; }
+
+.dark .bg-red-50         { background-color: #2E1A1A; }
+.dark .text-red-400      { color: #C47070; }
+.dark .text-red-500      { color: #C47070; }
+.dark .bg-red-500        { background-color: #8A3838; }
+
+.dark .bg-violet-50      { background-color: #221A2E; }
+.dark .text-violet-400   { color: #9B8EC4; }
