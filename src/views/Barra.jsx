@@ -1,14 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import IconoFallback from '../components/IconoFallback';
 
-export default function VistaBarra({ productos, registrarVenta, mostrarNotif }) {
+export default function VistaBarra({ productos, registrarVenta, mostrarNotif, eventoActivo }) {
   const [carrito, setCarrito] = useState({});
   const [procesando, setProcesando] = useState(false);
   const [verCarrito, setVerCarrito] = useState(false);
 
+  const productosConEvento = useMemo(() => {
+    let lista = [...productos];
+    if (eventoActivo) {
+      lista = lista.map(p => {
+        const ajuste = eventoActivo.ajustes?.find(a => a.producto_id === p.id);
+        return ajuste ? { ...p, precio: ajuste.precio_evento } : p;
+      });
+      const comidas = (eventoActivo.comidas || []).map(c => ({
+        id: `EVT_${c.nombre.replace(/\s+/g, '_')}`,
+        nombre: c.nombre,
+        precio: c.precio,
+        categoria: 'comida',
+        stock: 999,
+        stock_minimo: 0,
+      }));
+      lista = [...lista, ...comidas];
+    }
+    return lista;
+  }, [productos, eventoActivo]);
+
   const agregar = (prod) => {
     const cant = carrito[prod.id]?.cantidad || 0;
-    if (cant >= prod.stock) return;
+    if (prod.categoria !== 'comida' && cant >= prod.stock) return;
     setCarrito(prev => ({ ...prev, [prod.id]: { ...prod, cantidad: cant + 1 } }));
   };
 
@@ -32,10 +52,17 @@ export default function VistaBarra({ productos, registrarVenta, mostrarNotif }) 
 
   const total      = Object.values(carrito).reduce((a, c) => a + c.precio * c.cantidad, 0);
   const totalItems = Object.values(carrito).reduce((a, c) => a + c.cantidad, 0);
-  const disponibles = productos.filter(p => p.stock > 0);
+  const disponibles = productosConEvento.filter(p => p.categoria === 'comida' || p.stock > 0);
 
   return (
     <div className="pb-24 space-y-3">
+      {eventoActivo && (
+        <div className="bg-brand-400 text-white rounded-2xl px-4 py-2.5 flex items-center gap-2 text-sm font-medium">
+          <span>🎉</span>
+          <span>{eventoActivo.nombre}</span>
+          <span className="ml-auto text-white/70 text-xs">{eventoActivo.hora_inicio.slice(0,5)}–{eventoActivo.hora_fin.slice(0,5)}</span>
+        </div>
+      )}
       {disponibles.length === 0 ? (
         <div className="text-center py-20 text-stone-300">
           <p className="text-3xl mb-2">📭</p>
@@ -44,7 +71,7 @@ export default function VistaBarra({ productos, registrarVenta, mostrarNotif }) 
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {disponibles.map(p => {
-            const critico = p.stock <= p.stock_minimo;
+            const critico = p.categoria !== 'comida' && p.stock <= p.stock_minimo;
             const enCarrito = carrito[p.id]?.cantidad || 0;
             return (
               <button

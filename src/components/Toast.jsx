@@ -16,19 +16,19 @@ export default function Toast({ notif, onClose }) {
   if (!notif) return null;
 
   const colores = {
-    ok:    'bg-green-400 text-black border-black',
-    error: 'bg-red-500 text-white border-white',
-    info:  'bg-yellow-400 text-black border-black',
+    ok:    'bg-emerald-50 text-emerald-700 border-emerald-100',
+    error: 'bg-red-50 text-red-500 border-red-100',
+    info:  'bg-brand-50 text-brand-500 border-brand-100',
   };
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 border-4 px-4 py-3 font-mono font-black uppercase text-sm max-w-xs shadow-lg ${colores[notif.tipo]}`}
+      className={`fixed bottom-6 right-4 left-4 max-w-sm mx-auto z-50 border rounded-2xl px-4 py-3 text-sm font-medium shadow-md ${colores[notif.tipo]}`}
       style={{ animation: 'slideUp 0.2s ease-out' }}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <span>{notif.texto}</span>
-        <button onClick={onClose} className="font-black text-lg leading-none opacity-60 hover:opacity-100">×</button>
+        <button onClick={onClose} className="text-lg leading-none opacity-40 hover:opacity-70">×</button>
       </div>
       <style>{`
         @keyframes slideUp {

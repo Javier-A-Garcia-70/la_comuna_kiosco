@@ -2,9 +2,11 @@ import React from 'react';
 
 export default function IconoFallback({ categoria }) {
   const iconos = {
-    bebida: '🍺',
-    comida: '🍕',
-    otro:   '📦',
+    cerveza: '🍺',
+    vino:    '🍷',
+    bebida:  '🥤',
+    comida:  '🍕',
+    otro:    '📦',
   };
   const emoji = iconos[categoria] || iconos.otro;
   return (

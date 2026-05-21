@@ -1,0 +1,4 @@
+lURL de deploy en Vercel:
+https://la-comuna-kiosco.vercel.app/
+
+Guardá este archivo para referencia rápida del link público de la app.

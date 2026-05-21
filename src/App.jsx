@@ -8,6 +8,7 @@ import VistaTaquilla from './views/Taquilla';
 import VistaBarra from './views/Barra';
 import VistaAdmin from './views/AdminDashboard';
 import VistaStock from './views/Stock';
+import VistaEventos from './views/Eventos';
 
 async function conRetry(fn, intentos = 3) {
   for (let i = 0; i < intentos; i++) {
@@ -26,6 +27,8 @@ export default function App() {
   const [productos, setProductos] = useState([]);
   const [ventasEnVivo, setVentasEnVivo] = useState([]);
   const [notif, setNotif] = useState(null);
+  const [eventos, setEventos] = useState([]);
+  const [eventoActivo, setEventoActivo] = useState(null);
 
   const mostrarNotif = useCallback((tipo, texto) => setNotif({ tipo, texto }), []);
   const cerrarNotif  = useCallback(() => setNotif(null), []);
@@ -40,14 +43,33 @@ export default function App() {
     return () => authListener.subscription.unsubscribe();
   }, []);
 
+  const calcularEventoActivo = useCallback((lista) => {
+    const ahora = new Date();
+    const minActual = ahora.getHours() * 60 + ahora.getMinutes();
+    const activo = lista.find(ev => {
+      const [h1, m1] = ev.hora_inicio.split(':').map(Number);
+      const [h2, m2] = ev.hora_fin.split(':').map(Number);
+      return minActual >= h1 * 60 + m1 && minActual <= h2 * 60 + m2;
+    }) || null;
+    setEventoActivo(activo);
+  }, []);
+
+  useEffect(() => {
+    calcularEventoActivo(eventos);
+    const timer = setInterval(() => calcularEventoActivo(eventos), 60000);
+    return () => clearInterval(timer);
+  }, [eventos, calcularEventoActivo]);
+
   useEffect(() => {
     if (!userMode) return;
     const init = async () => {
       const { data: prods, error } = await supabase.from('productos').select('*');
       if (error) mostrarNotif('error', traducirError(error));
       else setProductos(prods || []);
+      const hoy = new Date().toISOString().split('T')[0];
+      const { data: evs } = await supabase.from('eventos').select('*').eq('fecha', hoy).order('hora_inicio');
+      setEventos(evs || []);
       if (userMode === 'admin') {
-        const hoy = new Date().toISOString().split('T')[0];
         const { data: ventas } = await supabase.from('ventas').select('*').gte('fecha', hoy);
         setVentasEnVivo(ventas || []);
       }
@@ -61,6 +83,13 @@ export default function App() {
         else if (payload.eventType === 'DELETE') setProductos(prev => prev.filter(p => p.id !== payload.old.id));
       }).subscribe();
 
+    const canalEventos = supabase.channel('cambios-eventos')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'eventos' }, () => {
+        const hoy = new Date().toISOString().split('T')[0];
+        supabase.from('eventos').select('*').eq('fecha', hoy).order('hora_inicio')
+          .then(({ data }) => setEventos(data || []));
+      }).subscribe();
+
     const canalVentas = userMode === 'admin'
       ? supabase.channel('cambios-ventas')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ventas' }, (payload) => {
@@ -70,6 +99,7 @@ export default function App() {
 
     return () => {
       supabase.removeChannel(canalProductos);
+      supabase.removeChannel(canalEventos);
       if (canalVentas) supabase.removeChannel(canalVentas);
     };
   }, [userMode]);
@@ -78,6 +108,7 @@ export default function App() {
     const total = items.reduce((acc, i) => acc + i.precio * i.cantidad, 0);
     for (const item of items) {
       if (item.id === 'ENTRADA') continue;
+      if (item.categoria === 'comida') continue;
       const { data: ok, error } = await supabase.rpc('decrementar_stock', { producto_id: item.id, cantidad: item.cantidad });
       if (error) { mostrarNotif('error', traducirError(error)); return false; }
       if (!ok)   { mostrarNotif('error', `Sin stock: ${item.nombre}`); return false; }
@@ -98,7 +129,7 @@ export default function App() {
   const salir    = async () => { await supabase.auth.signOut(); setUserMode(null); setCurrentPath('/barra'); };
 
   const rutas = userMode === 'admin'
-    ? [{ path:'/barra', label:'Barra', icon:'🍺' }, { path:'/entrada', label:'Taquilla', icon:'🎟️' }, { path:'/stock', label:'Stock', icon:'📦' }, { path:'/admin', label:'Ventas', icon:'📊' }]
+    ? [{ path:'/barra', label:'Barra', icon:'🍺' }, { path:'/entrada', label:'Taquilla', icon:'🎟️' }, { path:'/eventos', label:'Eventos', icon:'🎉' }, { path:'/stock', label:'Stock', icon:'📦' }, { path:'/admin', label:'Ventas', icon:'📊' }]
     : [{ path:'/barra', label:'Barra', icon:'🍺' }, { path:'/entrada', label:'Taquilla', icon:'🎟️' }];
 
   if (!userMode) return (
@@ -131,10 +162,11 @@ export default function App() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} rutas={rutas} currentPath={currentPath} onNavegar={navegar} userMode={userMode} onSalir={salir} />
 
       <main className="p-4 max-w-lg mx-auto">
-        {currentPath === '/barra'   && <VistaBarra   productos={productos} registrarVenta={procesarTransaccion} {...props} />}
-        {currentPath === '/entrada' && <VistaTaquilla registrarVenta={procesarTransaccion} {...props} />}
-        {currentPath === '/admin'   && userMode === 'admin' && <VistaAdmin productos={productos} ventas={ventasEnVivo} {...props} />}
+        {currentPath === '/barra'   && <VistaBarra   productos={productos} registrarVenta={procesarTransaccion} eventoActivo={eventoActivo} {...props} />}
+        {currentPath === '/entrada' && <VistaTaquilla registrarVenta={procesarTransaccion} eventoActivo={eventoActivo} {...props} />}
+        {currentPath === '/admin'   && userMode === 'admin' && <VistaAdmin productos={productos} ventas={ventasEnVivo} eventos={eventos} eventoActivo={eventoActivo} {...props} />}
         {currentPath === '/stock'   && userMode === 'admin' && <VistaStock productos={productos} {...props} />}
+        {currentPath === '/eventos' && userMode === 'admin' && <VistaEventos productos={productos} eventos={eventos} {...props} />}
       </main>
 
       <Toast notif={notif} onClose={cerrarNotif} />
