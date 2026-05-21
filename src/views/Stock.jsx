@@ -117,23 +117,23 @@ export default function VistaStock({ productos, mostrarNotif }) {
             </button>
 
             {abierto && (
-              <div className="px-4 pb-3 space-y-2 border-t border-stone-50">
-                {!esComidaItem && (
-                  <div className="flex items-center gap-2 pt-2">
-                    <input
-                      type="number" min="1" placeholder="+ unidades"
-                      value={refills[p.id]||''}
-                      onChange={e => setRefills(prev=>({...prev,[p.id]:e.target.value}))}
-                      className="w-2/3 bg-cream rounded-xl px-3 py-2 text-xs text-stone-600 focus:outline-none focus:ring-2 focus:ring-brand-300"
-                    />
-                    <button onClick={() => refill(p)} disabled={refillLoad===p.id || !refills[p.id]}
-                      className="bg-brand-400 text-white font-medium text-xs rounded-xl px-3 py-2 active:scale-95 transition-transform disabled:opacity-40">
-                      {refillLoad===p.id ? '...' : 'Agregar'}
-                    </button>
-                  </div>
-                )}
-                <div className={`flex items-center gap-2 ${esComidaItem ? 'pt-2' : ''}`}>
-                  <button onClick={() => abrirEdicion(p)} className="flex-1 bg-stone-50 text-stone-500 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">Editar</button>
+              <div className="px-4 pb-3 pt-2 border-t border-stone-50">
+                <div className="flex items-center gap-2">
+                  {!esComidaItem && (
+                    <>
+                      <input
+                        type="number" min="1" placeholder="+ unidades"
+                        value={refills[p.id]||''}
+                        onChange={e => setRefills(prev=>({...prev,[p.id]:e.target.value}))}
+                        className="w-2/3 bg-cream rounded-xl px-3 py-2 text-xs text-stone-600 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                      />
+                      <button onClick={() => refill(p)} disabled={refillLoad===p.id || !refills[p.id]}
+                        className="bg-brand-400 text-white font-medium text-xs rounded-xl px-3 py-2 active:scale-95 transition-transform disabled:opacity-40">
+                        {refillLoad===p.id ? '...' : 'Agregar'}
+                      </button>
+                    </>
+                  )}
+                  <button onClick={() => abrirEdicion(p)} className="bg-stone-50 text-stone-500 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">Editar</button>
                   <button onClick={() => eliminar(p.id, p.nombre)} className="bg-red-50 text-red-400 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">×</button>
                 </div>
               </div>
