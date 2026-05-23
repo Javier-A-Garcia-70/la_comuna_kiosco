@@ -154,8 +154,8 @@ export default function App() {
   const salir    = async () => { await supabase.auth.signOut(); localStorage.removeItem('userMode'); setUserMode(null); setCurrentPath('/barra'); };
 
   const rutas = userMode === 'admin'
-    ? [{ path:'/barra', label:'Barra', icon:'🍺' }, { path:'/entrada', label:'Taquilla', icon:'🎟️' }, { path:'/eventos', label:'Eventos', icon:'🎉' }, { path:'/admin', label:'Ventas', icon:'📊' }, { path:'/stock', label:'Stock', icon:'📦' }]
-    : [{ path:'/barra', label:'Barra', icon:'🍺' }, { path:'/entrada', label:'Taquilla', icon:'🎟️' }];
+    ? [{ path:'/barra', label:'Barra', icon:'🍺' }, { path:'/entrada', label:'Entrada', icon:'🎟️' }, { path:'/eventos', label:'Eventos', icon:'🎉' }, { path:'/admin', label:'Ventas', icon:'📊' }, { path:'/stock', label:'Stock', icon:'📦' }]
+    : [{ path:'/barra', label:'Barra', icon:'🍺' }, { path:'/entrada', label:'Entrada', icon:'🎟️' }];
 
   if (!userMode) return (
     <>
