@@ -31,6 +31,21 @@ export default function App() {
   const [eventos, setEventos] = useState([]);
   const [eventoActivo, setEventoActivo] = useState(null);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('dark') === '1');
+  const [installPrompt, setInstallPrompt] = useState(null);
+
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => setInstallPrompt(null));
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const instalarApp = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') setInstallPrompt(null);
+  };
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -172,7 +187,7 @@ export default function App() {
         </div>
       </header>
 
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} rutas={rutas} currentPath={currentPath} onNavegar={navegar} userMode={userMode} onSalir={salir} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} rutas={rutas} currentPath={currentPath} onNavegar={navegar} userMode={userMode} onSalir={salir} installPrompt={installPrompt} onInstalar={instalarApp} />
 
       <main className="p-4 max-w-lg mx-auto">
         {currentPath === '/barra'   && <VistaBarra   productos={productos} registrarVenta={procesarTransaccion} eventoActivo={eventoActivo} {...props} />}
