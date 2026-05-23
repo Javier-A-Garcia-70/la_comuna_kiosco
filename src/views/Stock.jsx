@@ -107,7 +107,7 @@ export default function VistaStock({ productos, mostrarNotif }) {
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 {esComidaItem
-                  ? <span className="bg-violet-50 text-violet-400 text-xs font-medium px-2 py-0.5 rounded-full">sin stock</span>
+                  ? <span className="bg-stone-50 text-stone-300 text-xs font-medium px-2 py-0.5 rounded-full">no aplica</span>
                   : sinStock
                   ? <span className="bg-red-50 text-red-400 text-xs font-medium px-2 py-0.5 rounded-full">sin stock</span>
                   : bajo
