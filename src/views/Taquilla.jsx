@@ -7,7 +7,7 @@ const METODOS = [
   { key: 'invitado',      label: 'Invitado',      icon: '👤', bg: 'bg-white border border-stone-100', textColor: 'text-stone-600' },
 ];
 
-export default function VistaTaquilla({ registrarVenta, eventoActivo }) {
+export default function VistaTaquilla({ registrarVenta, eventoActivo, userMode }) {
   const [ingresos, setIngresos] = useState(0);
   const [procesando, setProcesando] = useState(null);
 
@@ -67,16 +67,18 @@ export default function VistaTaquilla({ registrarVenta, eventoActivo }) {
         ))}
       </div>
 
-      <button
-        onClick={() => { if (confirm('¿Resetear el contador de ingresos a cero?')) setIngresos(0); }}
-        className="fixed bottom-6 right-4 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-400 text-white text-xs font-medium active:scale-95 transition-transform shadow-md"
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-          <path d="M3 3v5h5"/>
-        </svg>
-        Reset
-      </button>
+      {userMode === 'admin' && (
+        <button
+          onClick={() => { if (confirm('¿Resetear el contador de ingresos a cero?')) setIngresos(0); }}
+          className="fixed bottom-6 right-4 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-400 text-white text-xs font-medium active:scale-95 transition-transform shadow-md"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+          Reset
+        </button>
+      )}
     </div>
   );
 }

@@ -175,7 +175,7 @@ export default function App() {
     </>
   );
 
-  const props = { mostrarNotif };
+  const props = { mostrarNotif, userMode };
   const titulo = rutas.find(r => r.path === currentPath)?.label ?? '';
 
   return (
