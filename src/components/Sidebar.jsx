@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Sidebar({ open, onClose, rutas, currentPath, onNavegar, userMode, onSalir, installPrompt, onInstalar }) {
+export default function Sidebar({ open, onClose, rutas, currentPath, onNavegar, userMode, onSalir, installPrompt, onInstalar, yaInstalada }) {
   return (
     <>
       {open && (
@@ -39,18 +39,25 @@ export default function Sidebar({ open, onClose, rutas, currentPath, onNavegar, 
         </nav>
 
         <p className="pl-7 pb-1 text-stone-300 text-[10px] italic font-light">versión 1.0.0</p>
-        {installPrompt && (
+        {(installPrompt || yaInstalada) && (
           <div className="px-3">
             <button
-              onClick={onInstalar}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-400 text-sm hover:bg-stone-50 transition-colors active:scale-95"
+              onClick={yaInstalada ? undefined : onInstalar}
+              disabled={yaInstalada}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${yaInstalada ? 'text-stone-300 cursor-default' : 'text-stone-400 hover:bg-stone-50 active:scale-95'}`}
             >
               <span className="w-6 text-center">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto">
-                  <path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 21h14"/>
-                </svg>
+                {yaInstalada ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto">
+                    <path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 21h14"/>
+                  </svg>
+                )}
               </span>
-              <span>Agregar a inicio</span>
+              <span>{yaInstalada ? 'Ya instalada' : 'Agregar a inicio'}</span>
             </button>
           </div>
         )}

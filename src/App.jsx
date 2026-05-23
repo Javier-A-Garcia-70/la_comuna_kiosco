@@ -32,11 +32,14 @@ export default function App() {
   const [eventoActivo, setEventoActivo] = useState(null);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('dark') === '1');
   const [installPrompt, setInstallPrompt] = useState(null);
+  const [yaInstalada, setYaInstalada] = useState(
+    window.matchMedia('(display-mode: standalone)').matches
+  );
 
   useEffect(() => {
     const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
     window.addEventListener('beforeinstallprompt', handler);
-    window.addEventListener('appinstalled', () => setInstallPrompt(null));
+    window.addEventListener('appinstalled', () => { setInstallPrompt(null); setYaInstalada(true); });
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
@@ -187,7 +190,7 @@ export default function App() {
         </div>
       </header>
 
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} rutas={rutas} currentPath={currentPath} onNavegar={navegar} userMode={userMode} onSalir={salir} installPrompt={installPrompt} onInstalar={instalarApp} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} rutas={rutas} currentPath={currentPath} onNavegar={navegar} userMode={userMode} onSalir={salir} installPrompt={installPrompt} onInstalar={instalarApp} yaInstalada={yaInstalada} />
 
       <main className="p-4 max-w-lg mx-auto">
         {currentPath === '/barra'   && <VistaBarra   productos={productos} registrarVenta={procesarTransaccion} eventoActivo={eventoActivo} {...props} />}
