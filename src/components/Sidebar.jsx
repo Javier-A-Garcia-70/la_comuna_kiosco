@@ -38,6 +38,7 @@ export default function Sidebar({ open, onClose, rutas, currentPath, onNavegar, 
           })}
         </nav>
 
+        <p className="pl-7 pb-2 text-stone-300 text-[10px] italic font-light">versión 1.0.0</p>
         <div className="p-3 border-t border-stone-100">
           <button
             onClick={onSalir}

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { traducirError } from '../lib/errores';
+import { fechaLocal } from '../lib/fecha';
 
-const hoyISO = () => new Date().toISOString().split('T')[0];
+const hoyISO = () => fechaLocal();
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -31,7 +32,7 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
     if (tab !== 'evento') return;
     const { year, month } = mesVisto;
     const desde = `${year}-${String(month+1).padStart(2,'0')}-01`;
-    const hasta  = new Date(year, month+1, 0).toISOString().split('T')[0];
+    const hasta  = fechaLocal(new Date(year, month+1, 0));
     supabase.from('eventos').select('*').gte('fecha', desde).lte('fecha', hasta).order('fecha').order('hora_inicio')
       .then(({ data }) => setEventosDelMes(data || []));
   }, [mesVisto, tab]);

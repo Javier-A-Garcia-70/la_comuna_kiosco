@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { traducirError } from '../lib/errores';
+import { fechaLocal } from '../lib/fecha';
 
 const CATS_BEBIDA = ['cerveza', 'vino', 'bebida'];
 const FORM_VACIO = { nombre: '', hora_inicio: '', hora_fin: '', precio_entrada: '', comidas: [], ajustes: {} };
@@ -27,7 +28,7 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
 
   const cargarMes = async ({ year, month }) => {
     const desde = `${year}-${String(month+1).padStart(2,'0')}-01`;
-    const hasta  = new Date(year, month+1, 0).toISOString().split('T')[0];
+    const hasta  = fechaLocal(new Date(year, month+1, 0));
     const { data } = await supabase.from('eventos').select('*').gte('fecha', desde).lte('fecha', hasta).order('fecha').order('hora_inicio');
     setEventosDelMes(data || []);
   };
@@ -117,7 +118,7 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
 
     const payload = {
       nombre: form.nombre.trim(),
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: fechaLocal(),
       hora_inicio: form.hora_inicio,
       hora_fin: form.hora_fin,
       precio_entrada: form.precio_entrada !== '' ? Number(form.precio_entrada) : null,
@@ -171,8 +172,8 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
       )}
 
       {eventosDelMes.map(ev => {
-        const activo = ev.fecha === new Date().toISOString().split('T')[0] && estaActivo(ev);
-        const esHoy  = ev.fecha === new Date().toISOString().split('T')[0];
+        const activo = ev.fecha === fechaLocal() && estaActivo(ev);
+        const esHoy  = ev.fecha === fechaLocal();
         return (
           <div key={ev.id} className="bg-white rounded-2xl p-4 border border-stone-100 space-y-2">
             <div className="flex items-start justify-between gap-2">

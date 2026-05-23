@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './lib/supabase';
 import { traducirError } from './lib/errores';
+import { fechaLocal } from './lib/fecha';
 import Toast from './components/Toast';
 import Sidebar from './components/Sidebar';
 import Landing from './views/Landing';
@@ -72,7 +73,7 @@ export default function App() {
       const { data: prods, error } = await supabase.from('productos').select('*');
       if (error) mostrarNotif('error', traducirError(error));
       else setProductos(prods || []);
-      const hoy = new Date().toISOString().split('T')[0];
+      const hoy = fechaLocal();
       const { data: evs } = await supabase.from('eventos').select('*').eq('fecha', hoy).order('hora_inicio');
       setEventos(evs || []);
       if (userMode === 'admin') {
@@ -91,7 +92,7 @@ export default function App() {
 
     const canalEventos = supabase.channel('cambios-eventos')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'eventos' }, () => {
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = fechaLocal();
         supabase.from('eventos').select('*').eq('fecha', hoy).order('hora_inicio')
           .then(({ data }) => setEventos(data || []));
       }).subscribe();
