@@ -115,7 +115,7 @@ export default function App() {
     const total = items.reduce((acc, i) => acc + i.precio * i.cantidad, 0);
     for (const item of items) {
       if (item.id === 'ENTRADA') continue;
-      if (item.categoria === 'comida') continue;
+      if (['comida','fernet'].includes(item.categoria)) continue;
       const { data: ok, error } = await supabase.rpc('decrementar_stock', { producto_id: item.id, cantidad: item.cantidad });
       if (error) { mostrarNotif('error', traducirError(error)); return false; }
       if (!ok)   { mostrarNotif('error', `Sin stock: ${item.nombre}`); return false; }

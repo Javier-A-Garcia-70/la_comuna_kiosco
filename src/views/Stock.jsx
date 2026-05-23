@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase';
 import { traducirError } from '../lib/errores';
 import IconoFallback from '../components/IconoFallback';
 
-const CATS = ['cerveza', 'vino', 'bebida', 'comida', 'otro'];
+const CATS = ['cerveza', 'vino', 'bebida', 'fernet', 'comida', 'otro'];
+const SIN_STOCK = ['comida', 'fernet'];
 const STOCK_MINIMO_DEFAULT = { cerveza: 10, vino: 5 };
 const VACIO = { nombre:'', precio:'', stock:'', stock_minimo:'', categoria:'cerveza' };
 
@@ -40,7 +41,7 @@ export default function VistaStock({ productos, mostrarNotif }) {
     }));
   };
 
-  const esComida = form.categoria === 'comida';
+  const esComida = SIN_STOCK.includes(form.categoria);
 
   const guardar = async () => {
     if (!form.nombre.trim() || form.precio==='') { setErrorModal('Nombre y precio son obligatorios.'); return; }
@@ -87,7 +88,7 @@ export default function VistaStock({ productos, mostrarNotif }) {
       </button>
 
       {ordenados.map(p => {
-        const esComidaItem = p.categoria === 'comida';
+        const esComidaItem = SIN_STOCK.includes(p.categoria);
         const sinStock = !esComidaItem && p.stock===0;
         const bajo = !esComidaItem && p.stock>0 && p.stock<=p.stock_minimo;
         const abierto = expandido === p.id;

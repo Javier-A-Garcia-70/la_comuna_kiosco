@@ -28,7 +28,7 @@ export default function VistaBarra({ productos, registrarVenta, mostrarNotif, ev
 
   const agregar = (prod) => {
     const cant = carrito[prod.id]?.cantidad || 0;
-    if (prod.categoria !== 'comida' && cant >= prod.stock) return;
+    if (!['comida','fernet'].includes(prod.categoria) && cant >= prod.stock) return;
     setCarrito(prev => ({ ...prev, [prod.id]: { ...prod, cantidad: cant + 1 } }));
   };
 
@@ -52,7 +52,7 @@ export default function VistaBarra({ productos, registrarVenta, mostrarNotif, ev
 
   const total      = Object.values(carrito).reduce((a, c) => a + c.precio * c.cantidad, 0);
   const totalItems = Object.values(carrito).reduce((a, c) => a + c.cantidad, 0);
-  const disponibles = productosConEvento.filter(p => p.categoria === 'comida' || p.stock > 0);
+  const disponibles = productosConEvento.filter(p => ['comida','fernet'].includes(p.categoria) || p.stock > 0);
 
   return (
     <div className="pb-24 space-y-3">
@@ -71,7 +71,7 @@ export default function VistaBarra({ productos, registrarVenta, mostrarNotif, ev
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {disponibles.map(p => {
-            const critico = p.categoria !== 'comida' && p.stock <= p.stock_minimo;
+            const critico = !['comida','fernet'].includes(p.categoria) && p.stock <= p.stock_minimo;
             const enCarrito = carrito[p.id]?.cantidad || 0;
             return (
               <button

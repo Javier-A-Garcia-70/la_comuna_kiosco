@@ -5,6 +5,7 @@ export default function IconoFallback({ categoria }) {
     cerveza: '🍺',
     vino:    '🍷',
     bebida:  '🥤',
+    fernet:  '🥃',
     comida:  '🍕',
     otro:    '📦',
   };

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { traducirError } from '../lib/errores';
 import { fechaLocal } from '../lib/fecha';
 
-const CATS_BEBIDA = ['cerveza', 'vino', 'bebida'];
+const CATS_BEBIDA = ['cerveza', 'vino', 'bebida', 'fernet'];
 const FORM_VACIO = { nombre: '', hora_inicio: '', hora_fin: '', precio_entrada: '', comidas: [], ajustes: {} };
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
