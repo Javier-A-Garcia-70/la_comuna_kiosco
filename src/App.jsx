@@ -65,10 +65,10 @@ export default function App() {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         setUserMode('admin');
-      } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
+      } else if (!session) {
         setUserMode(prev => {
           if (prev === 'admin') {
-            mostrarNotif('error', 'Sesión vencida, volvé a ingresar.');
+            if (event !== 'SIGNED_OUT') mostrarNotif('error', 'Sesión vencida, volvé a ingresar.');
             return null;
           }
           return prev;
