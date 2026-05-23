@@ -102,7 +102,19 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
 
       {tab==='vivo' && (
         <div className="space-y-3">
-          <div className="bg-white rounded-2xl p-5 border border-stone-100">
+          <div className="bg-white rounded-2xl p-5 border border-stone-100 relative">
+            <button
+              onClick={async () => {
+                if (!confirm('¿Borrar todas las ventas de hoy? Esta acción no se puede deshacer.')) return;
+                await supabase.from('ventas').delete().gte('fecha', hoyISO());
+              }}
+              className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-400 text-white text-xs font-medium active:scale-95 transition-transform shadow-sm"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+              </svg>
+              Reset
+            </button>
             <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1">Caja del día</p>
             <p className="text-4xl font-bold text-brand-400">${cajaHoy.toLocaleString()}</p>
             <p className="text-stone-400 text-xs mt-1">{ventas.length} operaciones</p>
