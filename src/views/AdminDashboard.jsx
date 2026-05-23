@@ -106,7 +106,9 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
             <button
               onClick={async () => {
                 if (!confirm('¿Borrar todas las ventas de hoy? Esta acción no se puede deshacer.')) return;
-                await supabase.from('ventas').delete().gte('fecha', hoyISO());
+                const { error } = await supabase.from('ventas').delete().gte('fecha', hoyISO());
+                if (error) mostrarNotif('error', error.message);
+                else mostrarNotif('ok', 'Ventas borradas.');
               }}
               className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-400 text-white text-xs font-medium active:scale-95 transition-transform shadow-sm"
             >
