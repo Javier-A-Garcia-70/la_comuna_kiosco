@@ -66,7 +66,13 @@ export default function App() {
       if (session) {
         setUserMode('admin');
       } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
-        setUserMode(prev => prev === 'admin' ? null : prev);
+        setUserMode(prev => {
+          if (prev === 'admin') {
+            mostrarNotif('error', 'Sesión vencida, volvé a ingresar.');
+            return null;
+          }
+          return prev;
+        });
         localStorage.removeItem('userMode');
       }
     });
