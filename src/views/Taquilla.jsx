@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { fechaLocal } from '../lib/fecha';
 
 const METODOS = [
   { key: 'efectivo',      label: 'Efectivo',     bg: 'bg-emerald-500', icon: '💵' },
@@ -69,7 +70,11 @@ export default function VistaTaquilla({ registrarVenta, eventoActivo, userMode }
 
       {userMode === 'admin' && (
         <button
-          onClick={() => { if (confirm('¿Resetear el contador de ingresos a cero?')) setIngresos(0); }}
+          onClick={async () => {
+            if (!confirm('¿Resetear el contador de ingresos a cero?')) return;
+            await supabase.from('ventas').delete().eq('origen', 'taquilla').gte('fecha', fechaLocal());
+            setIngresos(0);
+          }}
           className="fixed bottom-6 right-4 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-400 text-white text-xs font-medium active:scale-95 transition-transform shadow-md"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

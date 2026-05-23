@@ -130,7 +130,11 @@ export default function App() {
       ? supabase.channel('cambios-ventas')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ventas' }, (payload) => {
             setVentasEnVivo(prev => [...prev, payload.new]);
-          }).subscribe()
+          })
+          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'ventas' }, (payload) => {
+            setVentasEnVivo(prev => prev.filter(v => v.id !== payload.old.id));
+          })
+          .subscribe()
       : null;
 
     return () => {
