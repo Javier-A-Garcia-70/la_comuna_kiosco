@@ -62,8 +62,13 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) setUserMode('admin');
     });
-    const { data: authListener } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) setUserMode('admin');
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setUserMode('admin');
+      } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
+        setUserMode(prev => prev === 'admin' ? null : prev);
+        localStorage.removeItem('userMode');
+      }
     });
     return () => authListener.subscription.unsubscribe();
   }, []);
