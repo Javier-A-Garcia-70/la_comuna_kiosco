@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 const METODOS = [
   { key: 'efectivo',      label: 'Efectivo',     bg: 'bg-emerald-500', icon: '💵' },
   { key: 'transferencia', label: 'Transferencia', bg: 'bg-brand-400',  icon: '📲' },
-  { key: 'invitado',      label: 'Invitado',      icon: '🧑', bg: 'bg-white border border-stone-100', textColor: 'text-stone-600' },
+  { key: 'invitado',      label: 'Invitado',      icon: '👤', bg: 'bg-white border border-stone-100', textColor: 'text-stone-600' },
 ];
 
 export default function VistaTaquilla({ registrarVenta, eventoActivo }) {
