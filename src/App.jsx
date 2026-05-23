@@ -22,7 +22,7 @@ async function conRetry(fn, intentos = 3) {
 }
 
 export default function App() {
-  const [userMode, setUserMode] = useState(null);
+  const [userMode, setUserMode] = useState(() => localStorage.getItem('userMode') || null);
   const [currentPath, setCurrentPath] = useState('/barra');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [productos, setProductos] = useState([]);
@@ -151,7 +151,7 @@ export default function App() {
   };
 
   const navegar  = (path) => { setCurrentPath(path); setSidebarOpen(false); };
-  const salir    = async () => { await supabase.auth.signOut(); setUserMode(null); setCurrentPath('/barra'); };
+  const salir    = async () => { await supabase.auth.signOut(); localStorage.removeItem('userMode'); setUserMode(null); setCurrentPath('/barra'); };
 
   const rutas = userMode === 'admin'
     ? [{ path:'/barra', label:'Barra', icon:'🍺' }, { path:'/entrada', label:'Taquilla', icon:'🎟️' }, { path:'/eventos', label:'Eventos', icon:'🎉' }, { path:'/admin', label:'Ventas', icon:'📊' }, { path:'/stock', label:'Stock', icon:'📦' }]
@@ -159,7 +159,7 @@ export default function App() {
 
   if (!userMode) return (
     <>
-      <Landing onGuest={() => { setUserMode('guest'); setCurrentPath('/barra'); }} />
+      <Landing onGuest={() => { localStorage.setItem('userMode', 'guest'); setUserMode('guest'); setCurrentPath('/barra'); }} />
       <Toast notif={notif} onClose={cerrarNotif} />
     </>
   );
