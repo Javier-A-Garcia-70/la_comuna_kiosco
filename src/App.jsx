@@ -146,13 +146,6 @@ export default function App() {
 
   const procesarTransaccion = async (items, metodoPago, origen) => {
     const total = items.reduce((acc, i) => acc + i.precio * i.cantidad, 0);
-    for (const item of items) {
-      if (item.id === 'ENTRADA') continue;
-      if (['comida','fernet'].includes(item.categoria)) continue;
-      const { data: ok, error } = await supabase.rpc('decrementar_stock', { producto_id: item.id, cantidad: item.cantidad });
-      if (error) { mostrarNotif('error', traducirError(error)); return false; }
-      if (!ok)   { mostrarNotif('error', `Sin stock: ${item.nombre}`); return false; }
-    }
     try {
       await conRetry(async () => {
         const { error } = await supabase.from('ventas').insert({ items, total, metodo_pago: metodoPago, origen, fecha: new Date().toISOString() });

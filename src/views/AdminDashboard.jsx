@@ -163,29 +163,6 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
             </div>
           )}
 
-          <div className="bg-white rounded-2xl p-4 border border-stone-100">
-            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">Stock</p>
-            <div className="space-y-2">
-              {productos.map(p => {
-                const noAplica = ['comida','fernet'].includes(p.categoria);
-                const sinStock = !noAplica && p.stock===0;
-                const bajo = !noAplica && p.stock>0 && p.stock<=p.stock_minimo;
-                return (
-                  <div key={p.id} className="flex items-center justify-between">
-                    <span className="text-sm text-stone-600">{p.nombre}</span>
-                    {noAplica
-                      ? <span className="bg-stone-50 text-stone-300 text-xs font-medium px-2 py-0.5 rounded-full">no aplica</span>
-                      : sinStock
-                      ? <span className="bg-red-50 text-red-400 text-xs font-medium px-2 py-0.5 rounded-full">sin stock</span>
-                      : bajo
-                      ? <span className="bg-brand-50 text-brand-400 text-xs font-medium px-2 py-0.5 rounded-full">{p.stock} u. bajo</span>
-                      : <span className="bg-emerald-50 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full">{p.stock} u.</span>
-                    }
-                  </div>
-                );
-              })}
-            </div>
-          </div>
         </div>
       )}
 

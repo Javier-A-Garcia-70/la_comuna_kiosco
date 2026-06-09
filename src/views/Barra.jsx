@@ -30,7 +30,6 @@ export default function VistaBarra({ productos, registrarVenta, mostrarNotif, ev
 
   const agregar = (prod) => {
     const cant = carrito[prod.id]?.cantidad || 0;
-    if (!['comida','fernet'].includes(prod.categoria) && cant >= prod.stock) return;
     setCarrito(prev => ({ ...prev, [prod.id]: { ...prod, cantidad: cant + 1 } }));
   };
 
@@ -54,7 +53,7 @@ export default function VistaBarra({ productos, registrarVenta, mostrarNotif, ev
 
   const total      = Object.values(carrito).reduce((a, c) => a + c.precio * c.cantidad, 0);
   const totalItems = Object.values(carrito).reduce((a, c) => a + c.cantidad, 0);
-  const disponibles = productosConEvento.filter(p => ['comida','fernet'].includes(p.categoria) || p.stock > 0);
+  const disponibles = productosConEvento;
 
   return (
     <div className="pb-24 space-y-3">
@@ -73,7 +72,6 @@ export default function VistaBarra({ productos, registrarVenta, mostrarNotif, ev
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {disponibles.map(p => {
-            const critico = !['comida','fernet'].includes(p.categoria) && p.stock <= p.stock_minimo;
             const enCarrito = carrito[p.id]?.cantidad || 0;
             return (
               <button
@@ -81,11 +79,6 @@ export default function VistaBarra({ productos, registrarVenta, mostrarNotif, ev
                 onClick={() => agregar(p)}
                 className="bg-white rounded-2xl p-4 text-left border border-stone-100 active:scale-95 transition-transform relative"
               >
-                {critico && (
-                  <span className="absolute top-3 right-3 bg-brand-400 text-white text-[9px] font-medium px-1.5 py-0.5 rounded-full">
-                    últimas {p.stock}
-                  </span>
-                )}
                 <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center text-2xl mb-3">
                   <IconoFallback categoria={p.categoria} />
                 </div>
