@@ -1,0 +1,35 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    - cron: '0 9 * * 1,5'  # Lunes y Viernes 9:00 AM UTC (cada 3-4 días)
+  workflow_dispatch:        # Permite ejecutar manualmente desde GitHub
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          node -e "
+          const https = require('https');
+          const url = new URL(process.env.VITE_SUPABASE_URL + '/rest/v1/ventas?select=id&limit=1');
+          const options = {
+            hostname: url.hostname,
+            path: url.pathname + url.search,
+            method: 'GET',
+            headers: {
+              'apikey': process.env.VITE_SUPABASE_ANON_KEY,
+              'Authorization': 'Bearer ' + process.env.VITE_SUPABASE_ANON_KEY
+            }
+          };
+          const req = https.request(options, res => {
+            console.log('Status:', res.statusCode);
+            process.exit(res.statusCode < 400 ? 0 : 1);
+          });
+          req.on('error', e => { console.error(e); process.exit(1); });
+          req.end();
+          "
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
