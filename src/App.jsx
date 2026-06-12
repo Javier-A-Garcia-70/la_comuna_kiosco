@@ -60,7 +60,7 @@ export default function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data, error }) => {
-      if (error) supabase.auth.signOut();
+      if (error) localStorage.removeItem('pos-cultural-auth');
       else if (data.session) setUserMode('admin');
     });
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
