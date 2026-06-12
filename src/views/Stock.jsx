@@ -61,7 +61,7 @@ export default function VistaStock({ productos, mostrarNotif }) {
       </button>
 
       {ordenados.map(p => (
-          <div key={p.id} className="bg-white rounded-2xl border border-stone-100 flex items-center gap-3 px-4 py-3">
+          <div key={p.id} onClick={() => abrirEdicion(p)} className="bg-white rounded-2xl border border-stone-100 flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-stone-50">
             <div className="w-8 h-8 rounded-xl bg-brand-50 flex items-center justify-center text-base shrink-0">
               <IconoFallback categoria={p.categoria}/>
             </div>
@@ -70,14 +70,14 @@ export default function VistaStock({ productos, mostrarNotif }) {
               <p className="text-stone-400 text-xs">{p.categoria} · ${p.precio.toLocaleString()}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => abrirEdicion(p)} className="bg-stone-50 text-stone-500 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">Editar</button>
-              <button onClick={() => eliminar(p.id, p.nombre)} className="bg-red-50 text-red-400 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">×</button>
+              <button onClick={(e) => { e.stopPropagation(); abrirEdicion(p); }} className="bg-stone-50 text-stone-500 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">Editar</button>
+              <button onClick={(e) => { e.stopPropagation(); eliminar(p.id, p.nombre); }} className="bg-red-50 text-red-400 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">×</button>
             </div>
           </div>
       ))}
 
       {editando !== null && (
-        <div className="fixed inset-0 bg-black/25 flex items-end justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/25 flex items-end justify-center z-50 p-4" onClick={cerrar}>
           <div className="bg-white w-full max-w-md rounded-3xl p-5 space-y-4" onClick={e=>e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-stone-800">{editando==='nuevo' ? 'Nuevo producto' : 'Editar producto'}</h3>

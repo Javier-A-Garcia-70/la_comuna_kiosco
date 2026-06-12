@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { traducirError } from '../lib/errores';
-import { fechaLocal } from '../lib/fecha';
+import { fechaLocal, eventoEstaActivo, ventanaEvento, inicioDiaISO } from '../lib/fecha';
 
 const hoyISO = () => fechaLocal();
 
@@ -12,6 +12,112 @@ const METODO_COLORS = {
   transferencia: 'bg-brand-50 text-brand-500',
   invitado:      'bg-stone-50 text-stone-400',
 };
+
+const ORDEN_METODOS = ['efectivo', 'transferencia'];
+const ordenarMetodos = (entries) =>
+  [...entries].sort(([a], [b]) => {
+    const ia = ORDEN_METODOS.indexOf(a), ib = ORDEN_METODOS.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+
+const agruparItems = (vs) => {
+  const acc = {};
+  vs.flatMap(v => v.items || []).forEach(i => {
+    if (!acc[i.nombre]) acc[i.nombre] = { nombre: i.nombre, cantidad: 0, total: 0 };
+    acc[i.nombre].cantidad += i.cantidad;
+    acc[i.nombre].total    += i.precio * i.cantidad;
+  });
+  return Object.values(acc).sort((a, b) => b.total - a.total);
+};
+
+function DesgloseVentas({ ventas }) {
+  const [barraAbierta, setBarraAbierta] = useState(false);
+  const ventasBarra    = ventas.filter(v => v.origen === 'barra');
+  const ventasTaquilla = ventas.filter(v => v.origen === 'taquilla');
+
+  const porMetodoBarra = ventasBarra.reduce((a,v) => {
+    const m = v.metodo_pago || 'otro';
+    a[m] = (a[m]||0) + (v.total||0);
+    return a;
+  }, {});
+
+  const porMetodoTaquilla = ventasTaquilla.reduce((a,v) => {
+    const m = v.metodo_pago || 'otro';
+    if (m === 'invitado') { a._invitados = (a._invitados||0) + 1; return a; }
+    a[m] = (a[m]||0) + (v.total||0);
+    return a;
+  }, {});
+
+  if (ventasBarra.length === 0 && ventasTaquilla.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      {ventasBarra.length > 0 && (
+        <div className="bg-white rounded-2xl p-4 border border-stone-100 cursor-pointer" onClick={() => setBarraAbierta(o => !o)}>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">🍺 Barra</p>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+              className={`text-stone-300 transition-transform ${barraAbierta ? 'rotate-180' : ''}`}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+          <div className="space-y-2">
+            {ordenarMetodos(Object.entries(porMetodoBarra)).map(([m, monto]) => (
+              <div key={m} className="flex items-center justify-between">
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${METODO_COLORS[m]||'bg-stone-50 text-stone-400'}`}>{m}</span>
+                <span className="font-bold text-stone-700 text-sm">${monto.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+          {barraAbierta && (
+            <div className="mt-3 pt-3 border-t border-stone-100 space-y-3">
+              {ordenarMetodos(Object.entries(porMetodoBarra)).map(([m]) => {
+                const items = agruparItems(ventasBarra.filter(v => v.metodo_pago === m));
+                if (items.length === 0) return null;
+                return (
+                  <div key={m}>
+                    <p className="text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-1.5">{m}</p>
+                    <div className="space-y-1.5">
+                      {items.map(i => (
+                        <div key={i.nombre} className="flex items-center justify-between">
+                          <div><span className="text-sm text-stone-600">{i.nombre}</span><span className="text-xs text-stone-400 ml-1.5">×{i.cantidad}</span></div>
+                          <span className="font-bold text-stone-700 text-sm">${i.total.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {ventasTaquilla.length > 0 && (
+        <div className="bg-white rounded-2xl p-4 border border-stone-100">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">🎟️ Entrada</p>
+            <span className="text-xs font-bold text-stone-500">{ventasTaquilla.length} ingresos</span>
+          </div>
+          <div className="space-y-2">
+            {ordenarMetodos(Object.entries(porMetodoTaquilla).filter(([m]) => m !== '_invitados')).map(([m, monto]) => (
+              <div key={m} className="flex items-center justify-between">
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${METODO_COLORS[m]||'bg-stone-50 text-stone-400'}`}>{m}</span>
+                <span className="font-bold text-stone-700 text-sm">${monto.toLocaleString()}</span>
+              </div>
+            ))}
+            {porMetodoTaquilla._invitados > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-stone-50 text-stone-400">invitado</span>
+                <span className="font-bold text-stone-400 text-sm">{porMetodoTaquilla._invitados} personas</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, mostrarNotif }) {
   const hoy = new Date();
@@ -27,6 +133,15 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const [ventasDelEvento, setVentasDelEvento]       = useState(null);
   const [cargandoEvento, setCargandoEvento]         = useState(false);
+  const [eventosExtendidos, setEventosExtendidos]   = useState([]);
+
+  // Tick por minuto para que "En vivo" corte solo al pasar la medianoche
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick(x => x + 1), 60000);
+    return () => clearInterval(t);
+  }, []);
+  const ventasHoy = ventas.filter(v => new Date(v.fecha) >= new Date(`${hoyISO()}T00:00:00`));
 
   useEffect(() => {
     if (tab !== 'evento') return;
@@ -42,10 +157,7 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
     const esHoy = ev.fecha === hoyISO();
     if (esHoy) { setVentasDelEvento(null); return; }
     setCargandoEvento(true);
-    // Ventana real del evento en hora local; si hora_fin < hora_inicio termina al día siguiente
-    const inicio = new Date(`${ev.fecha}T${ev.hora_inicio}`);
-    const fin    = new Date(`${ev.fecha}T${ev.hora_fin}`);
-    if (fin <= inicio) fin.setDate(fin.getDate() + 1);
+    const { inicio, fin } = ventanaEvento(ev);
     const { data } = await supabase.from('ventas').select('*')
       .gte('fecha', inicio.toISOString()).lte('fecha', fin.toISOString());
     setCargandoEvento(false);
@@ -63,42 +175,42 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
     setEventoSeleccionado(null);
   };
 
-  const cajaHoy = ventas.reduce((a,v) => a+(v.total||0), 0);
-
-  const ventasBarra    = ventas.filter(v => v.origen === 'barra');
-  const ventasTaquilla = ventas.filter(v => v.origen === 'taquilla');
-
-  const porMetodoBarra = ventasBarra.reduce((a,v) => {
-    const m = v.metodo_pago || 'otro';
-    a[m] = (a[m]||0) + (v.total||0);
-    return a;
-  }, {});
-
-  const porMetodoTaquilla = ventasTaquilla.reduce((a,v) => {
-    const m = v.metodo_pago || 'otro';
-    if (m === 'invitado') { a._invitados = (a._invitados||0) + 1; return a; }
-    a[m] = (a[m]||0) + (v.total||0);
-    return a;
-  }, {});
+  const cajaHoy = ventasHoy.reduce((a,v) => a+(v.total||0), 0);
 
   const consultar = async () => {
-    setCargando(true); setRango(null);
+    setCargando(true); setRango(null); setEventosExtendidos([]);
+    // Período en hora local del dispositivo
+    const inicio = new Date(`${desde}T00:00:00`);
+    let fin = new Date(new Date(`${hasta}T00:00:00`).getTime() + 86400000); // fin de día exclusivo
+    const finPeriodo = fin;
+
+    // Si un evento empezó dentro del período pero termina después, se extiende el cálculo
+    const { data: evs } = await supabase.from('eventos').select('*').gte('fecha', desde).lte('fecha', hasta);
+    const extendidos = [];
+    (evs || []).forEach(ev => {
+      const { fin: finEv } = ventanaEvento(ev);
+      if (finEv > finPeriodo) {
+        extendidos.push(ev);
+        if (finEv > fin) fin = finEv;
+      }
+    });
+
     const { data, error } = await supabase.from('ventas').select('*')
-      .gte('fecha', desde+'T00:00:00').lte('fecha', hasta+'T23:59:59').order('fecha',{ascending:false});
+      .gte('fecha', inicio.toISOString()).lte('fecha', fin.toISOString()).order('fecha',{ascending:false});
     setCargando(false);
     if (error) mostrarNotif('error', traducirError(error));
-    else setRango(data||[]);
+    else { setRango(data||[]); setEventosExtendidos(extendidos); }
   };
 
-  const totalRango    = rango?.reduce((a,v) => a+(v.total||0), 0) ?? 0;
-  const entradasRango = rango?.filter(v => v.origen==='taquilla').length ?? 0;
-  const metodoRango   = rango?.reduce((a,v) => { const m=v.metodo_pago||'otro'; a[m]=(a[m]||0)+(v.total||0); return a; }, {});
+  const totalRango       = rango?.reduce((a,v) => a+(v.total||0), 0) ?? 0;
+  const entradasRango    = rango?.filter(v => v.origen==='taquilla').length ?? 0;
+  const ventasBarraRango = rango?.filter(v => v.origen==='barra').length ?? 0;
 
   return (
     <div className="space-y-4 pb-6">
       <div className="bg-white rounded-2xl p-1 flex border border-stone-100">
         {[['vivo','En vivo'],['evento','Evento'],['historial','Historial']].map(([t,label]) => (
-          <button key={t} onClick={() => { setTab(t); setEventoSeleccionado(eventoActivo || null); }}
+          <button key={t} onClick={() => { setTab(t); if (eventoActivo) seleccionarEvento(eventoActivo); else setEventoSeleccionado(null); }}
             className={`flex-1 py-2 rounded-xl text-sm transition-colors active:scale-95 ${tab===t ? 'bg-brand-400 text-white font-medium' : 'text-stone-400'}`}>
             {label}
           </button>
@@ -107,11 +219,16 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
 
       {tab==='vivo' && (
         <div className="space-y-3">
+          {eventoActivo && (
+            <div className="bg-brand-50 border border-brand-100 rounded-2xl px-4 py-2.5 text-xs text-brand-500 text-center">
+              Esta vista incluye las operaciones del evento en curso
+            </div>
+          )}
           <div className="bg-white rounded-2xl p-5 border border-stone-100 relative">
             <button
               onClick={async () => {
                 if (!confirm('¿Borrar todas las ventas de hoy? Esta acción no se puede deshacer.')) return;
-                const { error } = await supabase.from('ventas').delete().gte('fecha', hoyISO());
+                const { error } = await supabase.from('ventas').delete().gte('fecha', inicioDiaISO());
                 if (error) mostrarNotif('error', error.message);
                 else mostrarNotif('ok', 'Ventas borradas.');
               }}
@@ -124,49 +241,10 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
             </button>
             <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1">Caja del día</p>
             <p className="text-4xl font-bold text-brand-400">${cajaHoy.toLocaleString()}</p>
-            <p className="text-stone-400 text-xs mt-1">{ventas.length} operaciones</p>
+            <p className="text-stone-400 text-xs mt-1">{ventasHoy.length} operaciones</p>
           </div>
 
-          {(ventasBarra.length > 0 || ventasTaquilla.length > 0) && (
-            <div className="space-y-3">
-              {ventasBarra.length > 0 && (
-                <div className="bg-white rounded-2xl p-4 border border-stone-100">
-                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">🍺 Barra</p>
-                  <div className="space-y-2">
-                    {Object.entries(porMetodoBarra).map(([m, monto]) => (
-                      <div key={m} className="flex items-center justify-between">
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${METODO_COLORS[m]||'bg-stone-50 text-stone-400'}`}>{m}</span>
-                        <span className="font-bold text-stone-700 text-sm">${monto.toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {ventasTaquilla.length > 0 && (
-                <div className="bg-white rounded-2xl p-4 border border-stone-100">
-                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">🎟️ Entrada</p>
-                  <div className="space-y-2">
-                    {Object.entries(porMetodoTaquilla)
-                      .filter(([m]) => m !== '_invitados')
-                      .map(([m, monto]) => (
-                        <div key={m} className="flex items-center justify-between">
-                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${METODO_COLORS[m]||'bg-stone-50 text-stone-400'}`}>{m}</span>
-                          <span className="font-bold text-stone-700 text-sm">${monto.toLocaleString()}</span>
-                        </div>
-                      ))
-                    }
-                    {porMetodoTaquilla._invitados > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-stone-50 text-stone-400">invitado</span>
-                        <span className="font-bold text-stone-400 text-sm">{porMetodoTaquilla._invitados} personas</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          <DesgloseVentas ventas={ventasHoy} />
 
         </div>
       )}
@@ -175,20 +253,14 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
         const ev = eventoSeleccionado;
         const esHoy = ev?.fecha === hoyISO();
         const fuenteVentas = esHoy ? ventas : (ventasDelEvento || []);
-        const ventasEvento = ev ? fuenteVentas.filter(v => {
-          const d = new Date(v.fecha);
-          const min = d.getHours()*60 + d.getMinutes();
-          const [h1,m1] = ev.hora_inicio.split(':').map(Number);
-          const [h2,m2] = ev.hora_fin.split(':').map(Number);
-          return min >= h1*60+m1 && min <= h2*60+m2;
-        }) : [];
+        const ventasEvento = ev ? (() => {
+          const inicio = new Date(`${ev.fecha}T${ev.hora_inicio}`);
+          const fin    = new Date(`${ev.fecha}T${ev.hora_fin}`);
+          if (fin <= inicio) fin.setDate(fin.getDate() + 1);
+          return fuenteVentas.filter(v => { const d = new Date(v.fecha); return d >= inicio && d <= fin; });
+        })() : [];
         const totalEvento = ventasEvento.reduce((a,v) => a+(v.total||0), 0);
-        const activo = ev?.fecha === hoyISO() && (() => {
-          const min = new Date().getHours()*60+new Date().getMinutes();
-          const [h1,m1] = ev.hora_inicio.split(':').map(Number);
-          const [h2,m2] = ev.hora_fin.split(':').map(Number);
-          return min >= h1*60+m1 && min <= h2*60+m2;
-        })();
+        const activo = ev ? eventoEstaActivo(ev) : false;
 
         return (
           <div className="space-y-3">
@@ -212,12 +284,7 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
             ) : (
               <div className="bg-white rounded-2xl border border-stone-100 divide-y divide-stone-50">
                 {eventosDelMes.map(e => {
-                  const esActivo = e.fecha === hoyISO() && (() => {
-                    const min = new Date().getHours()*60+new Date().getMinutes();
-                    const [h1,m1] = e.hora_inicio.split(':').map(Number);
-                    const [h2,m2] = e.hora_fin.split(':').map(Number);
-                    return min >= h1*60+m1 && min <= h2*60+m2;
-                  })();
+                  const esActivo = eventoEstaActivo(e);
                   return (
                     <button key={e.id} onClick={() => seleccionarEvento(e)}
                       className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors ${eventoSeleccionado?.id===e.id ? 'bg-brand-50' : 'hover:bg-stone-50'}`}>
@@ -247,60 +314,9 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
                   </div>
                   <p className="text-xs text-stone-400 mb-3">{ev.hora_inicio.slice(0,5)} – {ev.hora_fin.slice(0,5)}{ev.precio_entrada != null ? ` · Entrada $${ev.precio_entrada.toLocaleString()}` : ''}</p>
                   <p className="text-3xl font-bold text-brand-400">${totalEvento.toLocaleString()}</p>
-                  <p className="text-xs text-stone-400 mt-1">{ventasEvento.length} operaciones durante el evento</p>
                 </div>
 
-                {(() => {
-                  const porMetodoEv = ventasEvento.reduce((a,v) => {
-                    const m = v.metodo_pago;
-                    if (m === 'invitado') { a._invitados = (a._invitados||0)+1; return a; }
-                    a[m] = (a[m]||0)+(v.total||0);
-                    return a;
-                  }, {});
-                  const itemsVendidos = ventasEvento.flatMap(v => v.items||[]).reduce((a,i) => {
-                    if (!a[i.nombre]) a[i.nombre] = { nombre:i.nombre, cantidad:0, total:0 };
-                    a[i.nombre].cantidad += i.cantidad;
-                    a[i.nombre].total += i.precio * i.cantidad;
-                    return a;
-                  }, {});
-                  const itemsOrdenados = Object.values(itemsVendidos).sort((a,b) => b.total-a.total);
-                  return (
-                    <>
-                      {Object.keys(porMetodoEv).length > 0 && (
-                        <div className="bg-white rounded-2xl p-4 border border-stone-100">
-                          <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">Por método</p>
-                          <div className="space-y-2">
-                            {Object.entries(porMetodoEv).filter(([m])=>m!=='_invitados').map(([m,monto]) => (
-                              <div key={m} className="flex items-center justify-between">
-                                <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${METODO_COLORS[m]||'bg-stone-50 text-stone-400'}`}>{m}</span>
-                                <span className="font-bold text-stone-700 text-sm">${monto.toLocaleString()}</span>
-                              </div>
-                            ))}
-                            {porMetodoEv._invitados > 0 && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-stone-50 text-stone-400">invitado</span>
-                                <span className="font-bold text-stone-400 text-sm">{porMetodoEv._invitados} personas</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {itemsOrdenados.length > 0 && (
-                        <div className="bg-white rounded-2xl p-4 border border-stone-100">
-                          <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">Productos vendidos</p>
-                          <div className="space-y-2">
-                            {itemsOrdenados.map(i => (
-                              <div key={i.nombre} className="flex items-center justify-between">
-                                <div><span className="text-sm text-stone-600">{i.nombre}</span><span className="text-xs text-stone-400 ml-1.5">×{i.cantidad}</span></div>
-                                <span className="font-bold text-stone-700 text-sm">${i.total.toLocaleString()}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
+                <DesgloseVentas ventas={ventasEvento} />
 
                 {ev.ajustes?.length > 0 && (
                   <div className="bg-white rounded-2xl p-4 border border-stone-100">
@@ -348,10 +364,23 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
 
           {rango !== null && (
             <div className="space-y-3">
+              {eventosExtendidos.length > 0 && (
+                <div className="bg-brand-50 border border-brand-100 rounded-2xl px-4 py-2.5 text-xs text-brand-500">
+                  {eventosExtendidos.map(ev => {
+                    const { fin } = ventanaEvento(ev);
+                    return (
+                      <p key={ev.id}>
+                        🎉 Este cálculo contempla la totalidad de las ventas del evento <span className="font-bold">{ev.nombre}</span> del {ev.fecha.slice(8,10)}/{ev.fecha.slice(5,7)}, que terminó el {String(fin.getDate()).padStart(2,'0')}/{String(fin.getMonth()+1).padStart(2,'0')} a las {ev.hora_fin.slice(0,5)}.
+                      </p>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { label:'Recaudado', valor:`$${totalRango.toLocaleString()}`, color:'text-brand-400' },
-                  { label:'Operaciones', valor:rango.length, color:'text-stone-700' },
+                  { label:'Ventas barra', valor:ventasBarraRango, color:'text-stone-700' },
                   { label:'Entradas', valor:entradasRango, color:'text-stone-700' },
                 ].map(({label,valor,color}) => (
                   <div key={label} className="bg-white rounded-2xl p-3 text-center border border-stone-100">
@@ -361,17 +390,7 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
                 ))}
               </div>
 
-              {metodoRango && Object.keys(metodoRango).length>0 && (
-                <div className="bg-white rounded-2xl p-4 border border-stone-100">
-                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">Por método</p>
-                  {Object.entries(metodoRango).map(([m,monto]) => (
-                    <div key={m} className="flex items-center justify-between mb-2">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${METODO_COLORS[m]||'bg-stone-50 text-stone-400'}`}>{m}</span>
-                      <span className="font-bold text-stone-700 text-sm">${monto.toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <DesgloseVentas ventas={rango} />
 
               {rango.length===0 && (
                 <div className="text-center py-10 text-stone-300">

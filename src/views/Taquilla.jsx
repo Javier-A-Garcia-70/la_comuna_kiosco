@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { fechaLocal } from '../lib/fecha';
+import { inicioDiaISO, ventanaEvento } from '../lib/fecha';
 
 const METODOS = [
   { key: 'efectivo',      label: 'Efectivo',     bg: 'bg-emerald-500', icon: '💵' },
@@ -15,10 +15,17 @@ export default function VistaTaquilla({ registrarVenta, eventoActivo, userMode }
   const precioEntrada = eventoActivo?.precio_entrada ?? null;
 
   useEffect(() => {
-    supabase.rpc('contar_entradas_hoy').then(({ data }) => {
-      if (data !== null) setIngresos(data);
-    });
-  }, []);
+    const cargar = () => {
+      // Con evento activo cuenta desde su inicio; si no, desde la medianoche local
+      const desde = eventoActivo ? ventanaEvento(eventoActivo).inicio.toISOString() : inicioDiaISO();
+      supabase.rpc('contar_entradas_desde', { desde }).then(({ data }) => {
+        if (data !== null) setIngresos(data);
+      });
+    };
+    cargar();
+    const t = setInterval(cargar, 60000);
+    return () => clearInterval(t);
+  }, [eventoActivo]);
 
   const vender = async (metodo) => {
     if (procesando) return;
@@ -72,7 +79,7 @@ export default function VistaTaquilla({ registrarVenta, eventoActivo, userMode }
         <button
           onClick={async () => {
             if (!confirm('¿Resetear el contador de ingresos a cero?')) return;
-            await supabase.from('ventas').delete().eq('origen', 'taquilla').gte('fecha', fechaLocal());
+            await supabase.from('ventas').delete().eq('origen', 'taquilla').gte('fecha', inicioDiaISO());
             setIngresos(0);
           }}
           className="fixed bottom-6 right-4 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-400 text-white text-xs font-medium active:scale-95 transition-transform shadow-md"

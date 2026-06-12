@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { traducirError } from '../lib/errores';
-import { fechaLocal, eventoEstaActivo } from '../lib/fecha';
+import { fechaLocal, eventoEstaActivo, ventanaEvento } from '../lib/fecha';
 
-const CATS_BEBIDA = ['cerveza', 'vino', 'bebida', 'fernet'];
-const FORM_VACIO = { nombre: '', hora_inicio: '', hora_fin: '', precio_entrada: '', comidas: [], ajustes: {} };
+const FORM_VACIO = { nombre: '', fecha: '', hora_inicio: '', hora_fin: '', precio_entrada: '', comidas: [], ajustes: {} };
+
+const GRACIA_EDICION_MS = 2 * 3600000; // editable hasta 2 horas después de terminado
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 export default function VistaEventos({ productos, eventos, mostrarNotif }) {
@@ -13,8 +14,10 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
   const [eventosDelMes, setEventosDelMes] = useState([]);
   const [form, setForm] = useState(FORM_VACIO);
   const [editandoId, setEditandoId] = useState(null);
+  const [eventoOriginal, setEventoOriginal] = useState(null);
   const [abierto, setAbierto] = useState(false);
   const [nuevaComida, setNuevaComida] = useState({ nombre: '', precio: '' });
+  const [mostrarPrecios, setMostrarPrecios] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
 
@@ -45,24 +48,30 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
     });
   };
 
-  const bebidas = useMemo(
-    () => productos.filter(p => CATS_BEBIDA.includes(p.categoria) && p.stock > 0)
-            .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+  const productosStock = useMemo(
+    () => [...productos].sort((a, b) => a.nombre.localeCompare(b.nombre)),
     [productos]
   );
 
   const abrirNuevo = () => {
-    setForm(FORM_VACIO);
+    setForm({ ...FORM_VACIO, fecha: fechaLocal() });
     setEditandoId(null);
+    setEventoOriginal(null);
     setErrorForm(null);
     setAbierto(true);
   };
 
   const abrirEdicion = (ev) => {
+    const { fin } = ventanaEvento(ev);
+    if (Date.now() > fin.getTime() + GRACIA_EDICION_MS) {
+      mostrarNotif('error', 'Este evento terminó hace más de 2 horas y ya no se puede editar.');
+      return;
+    }
     const ajustesMap = {};
     (ev.ajustes || []).forEach(a => { ajustesMap[a.producto_id] = String(a.precio_evento); });
     setForm({
       nombre: ev.nombre,
+      fecha: ev.fecha,
       hora_inicio: ev.hora_inicio.slice(0, 5),
       hora_fin: ev.hora_fin.slice(0, 5),
       precio_entrada: ev.precio_entrada != null ? String(ev.precio_entrada) : '',
@@ -70,11 +79,12 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
       ajustes: ajustesMap,
     });
     setEditandoId(ev.id);
+    setEventoOriginal(ev);
     setErrorForm(null);
     setAbierto(true);
   };
 
-  const cerrar = () => { setAbierto(false); setEditandoId(null); };
+  const cerrar = () => { setAbierto(false); setEditandoId(null); setEventoOriginal(null); };
 
   const agregarComida = () => {
     if (!nuevaComida.nombre.trim() || nuevaComida.precio === '') return;
@@ -91,15 +101,29 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
   };
 
   const guardar = async () => {
-    if (!form.nombre.trim() || !form.hora_inicio || !form.hora_fin) {
-      setErrorForm('Nombre, hora inicio y hora fin son obligatorios.');
+    if (!form.nombre.trim() || !form.fecha || !form.hora_inicio || !form.hora_fin) {
+      setErrorForm('Nombre, fecha, hora inicio y hora fin son obligatorios.');
       return;
+    }
+    if (!editandoId && form.fecha < fechaLocal()) {
+      setErrorForm('La fecha no puede ser anterior a hoy.');
+      return;
+    }
+    if (eventoOriginal) {
+      const { inicio } = ventanaEvento(eventoOriginal);
+      const yaEmpezo = Date.now() >= inicio.getTime();
+      if (yaEmpezo && form.hora_fin !== eventoOriginal.hora_fin.slice(0, 5)) {
+        if (!confirm('Esto va a modificar la duración del evento. ¿Confirmar?')) return;
+      }
+      if (yaEmpezo && form.hora_inicio !== eventoOriginal.hora_inicio.slice(0, 5)) {
+        if (!confirm('Esto modifica el horario de comienzo del evento. ¿Confirmar?')) return;
+      }
     }
     setCargando(true);
     const ajustesArray = Object.entries(form.ajustes)
       .filter(([, v]) => v !== '' && v !== undefined && !isNaN(Number(v)))
       .map(([producto_id, precio_evento]) => {
-        const prod = bebidas.find(p => p.id === Number(producto_id));
+        const prod = productosStock.find(p => p.id === Number(producto_id));
         return {
           producto_id: Number(producto_id),
           nombre: prod?.nombre || '',
@@ -110,7 +134,7 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
 
     const payload = {
       nombre: form.nombre.trim(),
-      fecha: fechaLocal(),
+      fecha: form.fecha,
       hora_inicio: form.hora_inicio,
       hora_fin: form.hora_fin,
       precio_entrada: form.precio_entrada !== '' ? Number(form.precio_entrada) : null,
@@ -167,7 +191,7 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
         const activo = eventoEstaActivo(ev);
         const esHoy  = ev.fecha === fechaLocal();
         return (
-          <div key={ev.id} className="bg-white rounded-2xl p-4 border border-stone-100 space-y-2">
+          <div key={ev.id} onClick={() => abrirEdicion(ev)} className="bg-white rounded-2xl p-4 border border-stone-100 space-y-2 cursor-pointer active:bg-stone-50">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -182,8 +206,8 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
                 </p>
               </div>
               <div className="flex gap-1.5 shrink-0">
-                <button onClick={() => abrirEdicion(ev)} className="bg-stone-50 text-stone-500 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">Editar</button>
-                <button onClick={() => eliminar(ev.id, ev.nombre)} className="bg-red-50 text-red-400 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">×</button>
+                <button onClick={(e) => { e.stopPropagation(); abrirEdicion(ev); }} className="bg-stone-50 text-stone-500 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">Editar</button>
+                <button onClick={(e) => { e.stopPropagation(); eliminar(ev.id, ev.nombre); }} className="bg-red-50 text-red-400 font-medium text-xs rounded-xl px-3 py-2 active:scale-95">×</button>
               </div>
             </div>
           </div>
@@ -191,7 +215,7 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
       })}
 
       {abierto && (
-        <div className="fixed inset-0 bg-black/25 z-50 flex items-end justify-center p-0">
+        <div className="fixed inset-0 bg-black/25 z-50 flex items-end justify-center p-0" onClick={cerrar}>
           <div
             className="bg-white w-full max-w-md rounded-t-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto"
             style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
@@ -208,6 +232,16 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
               <input
                 type="text" value={form.nombre} onChange={e => setForm(p => ({ ...p, nombre: e.target.value }))}
                 placeholder="Ej: Noche de jazz"
+                className="w-full bg-cream rounded-xl px-3 py-2.5 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-brand-300"
+              />
+            </div>
+
+            {/* Fecha */}
+            <div>
+              <label className="block text-xs font-medium text-stone-400 uppercase tracking-wider mb-1.5">Fecha</label>
+              <input
+                type="date" value={form.fecha} min={editandoId ? undefined : fechaLocal()}
+                onChange={e => setForm(p => ({ ...p, fecha: e.target.value }))}
                 className="w-full bg-cream rounded-xl px-3 py-2.5 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-brand-300"
               />
             </div>
@@ -242,7 +276,7 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
 
             {/* Bebidas / Barra del evento */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Bebidas / Barra del evento</p>
+              <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Bebidas / Comidas exclusivas del evento</p>
               {form.comidas.map((c, i) => (
                 <div key={i} className="flex items-center gap-2 bg-cream rounded-xl px-3 py-2">
                   <span className="flex-1 text-sm text-stone-700 truncate">{c.nombre}</span>
@@ -271,12 +305,25 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
               </div>
             </div>
 
-            {/* Precios de bebidas */}
-            {bebidas.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Precio evento en bebidas</p>
+            {/* Precios del stock durante el evento */}
+            {productosStock.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={() => setMostrarPrecios(o => !o)}
+                  className="w-full flex items-center justify-between gap-3 bg-cream border border-stone-100 rounded-xl px-3 py-3 active:scale-[0.99] transition-transform"
+                >
+                  <span className="text-[11px] font-medium text-stone-500 uppercase tracking-wider">Precio evento del stock gral.</span>
+                  <span className="flex items-center gap-1 text-stone-400 shrink-0">
+                    <span className="text-[10px]">{mostrarPrecios ? 'Cerrar' : 'Modificar'}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                      className={`transition-transform ${mostrarPrecios ? 'rotate-180' : ''}`}>
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </span>
+                </button>
+                {mostrarPrecios && (<>
                 <p className="text-xs text-stone-300">Dejá vacío para mantener el precio normal.</p>
-                {bebidas.map(p => (
+                {productosStock.map(p => (
                   <div key={p.id} className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-stone-700 truncate">{p.nombre}</p>
@@ -290,6 +337,7 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
                     />
                   </div>
                 ))}
+                </>)}
               </div>
             )}
 

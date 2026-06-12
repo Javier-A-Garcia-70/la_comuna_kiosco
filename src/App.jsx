@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './lib/supabase';
 import { traducirError } from './lib/errores';
-import { fechaLocal, eventoEstaActivo } from './lib/fecha';
+import { fechaLocal, eventoEstaActivo, inicioDiaISO } from './lib/fecha';
 import Toast from './components/Toast';
 import Sidebar from './components/Sidebar';
 import Landing from './views/Landing';
@@ -23,7 +23,7 @@ async function conRetry(fn, intentos = 3) {
 
 export default function App() {
   const [userMode, setUserMode] = useState(() => localStorage.getItem('userMode') || null);
-  const [currentPath, setCurrentPath] = useState('/barra');
+  const [currentPath, setCurrentPath] = useState(() => localStorage.getItem('currentPath') || '/barra');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [productos, setProductos] = useState([]);
   const [ventasEnVivo, setVentasEnVivo] = useState([]);
@@ -101,7 +101,7 @@ export default function App() {
       const { data: evs } = await supabase.from('eventos').select('*').in('fecha', [ayer, hoy]).order('fecha').order('hora_inicio');
       setEventos(evs || []);
       if (userMode === 'admin') {
-        const { data: ventas } = await supabase.from('ventas').select('*').gte('fecha', hoy);
+        const { data: ventas } = await supabase.from('ventas').select('*').gte('fecha', inicioDiaISO());
         setVentasEnVivo(ventas || []);
       }
     };
@@ -153,6 +153,13 @@ export default function App() {
     }
     return true;
   };
+
+  useEffect(() => { localStorage.setItem('currentPath', currentPath); }, [currentPath]);
+
+  // El invitado no puede quedar en una ruta de admin tras refrescar
+  useEffect(() => {
+    if (userMode === 'guest' && !['/barra', '/entrada'].includes(currentPath)) setCurrentPath('/barra');
+  }, [userMode, currentPath]);
 
   const navegar  = (path) => { setCurrentPath(path); setSidebarOpen(false); };
   const salir    = async () => { await supabase.auth.signOut(); localStorage.removeItem('userMode'); setUserMode(null); setCurrentPath('/barra'); };
