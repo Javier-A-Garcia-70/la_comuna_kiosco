@@ -42,7 +42,12 @@ export default function VistaAdmin({ productos, ventas, eventos, eventoActivo, m
     const esHoy = ev.fecha === hoyISO();
     if (esHoy) { setVentasDelEvento(null); return; }
     setCargandoEvento(true);
-    const { data } = await supabase.from('ventas').select('*').gte('fecha', ev.fecha+'T00:00:00').lte('fecha', ev.fecha+'T23:59:59');
+    // Ventana real del evento en hora local; si hora_fin < hora_inicio termina al día siguiente
+    const inicio = new Date(`${ev.fecha}T${ev.hora_inicio}`);
+    const fin    = new Date(`${ev.fecha}T${ev.hora_fin}`);
+    if (fin <= inicio) fin.setDate(fin.getDate() + 1);
+    const { data } = await supabase.from('ventas').select('*')
+      .gte('fecha', inicio.toISOString()).lte('fecha', fin.toISOString());
     setCargandoEvento(false);
     setVentasDelEvento(data || []);
   };

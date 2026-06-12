@@ -57,13 +57,6 @@ export default function VistaBarra({ productos, registrarVenta, mostrarNotif, ev
 
   return (
     <div className="pb-24 space-y-3">
-      {eventoActivo && (
-        <div className="bg-brand-400 text-white rounded-2xl px-4 py-2.5 flex items-center gap-2 text-sm font-medium">
-          <span>🎉</span>
-          <span>{eventoActivo.nombre}</span>
-          <span className="ml-auto text-white/70 text-xs">{eventoActivo.hora_inicio.slice(0,5)}–{eventoActivo.hora_fin.slice(0,5)}</span>
-        </div>
-      )}
       {disponibles.length === 0 ? (
         <div className="text-center py-20 text-stone-300">
           <p className="text-3xl mb-2">📭</p>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './lib/supabase';
 import { traducirError } from './lib/errores';
-import { fechaLocal } from './lib/fecha';
+import { fechaLocal, eventoEstaActivo } from './lib/fecha';
 import Toast from './components/Toast';
 import Sidebar from './components/Sidebar';
 import Landing from './views/Landing';
@@ -81,14 +81,7 @@ export default function App() {
   }, []);
 
   const calcularEventoActivo = useCallback((lista) => {
-    const ahora = new Date();
-    const minActual = ahora.getHours() * 60 + ahora.getMinutes();
-    const activo = lista.find(ev => {
-      const [h1, m1] = ev.hora_inicio.split(':').map(Number);
-      const [h2, m2] = ev.hora_fin.split(':').map(Number);
-      return minActual >= h1 * 60 + m1 && minActual <= h2 * 60 + m2;
-    }) || null;
-    setEventoActivo(activo);
+    setEventoActivo(lista.find(ev => eventoEstaActivo(ev)) || null);
   }, []);
 
   useEffect(() => {
@@ -104,7 +97,8 @@ export default function App() {
       if (error) mostrarNotif('error', traducirError(error));
       else setProductos(prods || []);
       const hoy = fechaLocal();
-      const { data: evs } = await supabase.from('eventos').select('*').eq('fecha', hoy).order('hora_inicio');
+      const ayer = fechaLocal(new Date(Date.now() - 86400000));
+      const { data: evs } = await supabase.from('eventos').select('*').in('fecha', [ayer, hoy]).order('fecha').order('hora_inicio');
       setEventos(evs || []);
       if (userMode === 'admin') {
         const { data: ventas } = await supabase.from('ventas').select('*').gte('fecha', hoy);
@@ -123,7 +117,8 @@ export default function App() {
     const canalEventos = supabase.channel('cambios-eventos')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'eventos' }, () => {
         const hoy = fechaLocal();
-        supabase.from('eventos').select('*').eq('fecha', hoy).order('hora_inicio')
+        const ayer = fechaLocal(new Date(Date.now() - 86400000));
+        supabase.from('eventos').select('*').in('fecha', [ayer, hoy]).order('fecha').order('hora_inicio')
           .then(({ data }) => setEventos(data || []));
       }).subscribe();
 
@@ -200,6 +195,16 @@ export default function App() {
       </header>
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} rutas={rutas} currentPath={currentPath} onNavegar={navegar} userMode={userMode} onSalir={salir} installPrompt={installPrompt} onInstalar={instalarApp} yaInstalada={yaInstalada} />
+
+      {eventoActivo && (currentPath === '/barra' || currentPath === '/entrada') && (
+        <div className="max-w-lg mx-auto px-4 pt-3">
+          <div className="bg-brand-400 text-white rounded-2xl px-4 py-2.5 flex items-center gap-2 text-sm font-medium">
+            <span>🎉</span>
+            <span>{eventoActivo.nombre}</span>
+            <span className="ml-auto text-white/70 text-xs">{eventoActivo.hora_inicio.slice(0,5)}–{eventoActivo.hora_fin.slice(0,5)}</span>
+          </div>
+        </div>
+      )}
 
       <main className="p-4 max-w-lg mx-auto">
         {currentPath === '/barra'   && <VistaBarra   productos={productos} registrarVenta={procesarTransaccion} eventoActivo={eventoActivo} {...props} />}

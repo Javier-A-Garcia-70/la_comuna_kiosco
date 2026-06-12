@@ -1,19 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { traducirError } from '../lib/errores';
-import { fechaLocal } from '../lib/fecha';
+import { fechaLocal, eventoEstaActivo } from '../lib/fecha';
 
 const CATS_BEBIDA = ['cerveza', 'vino', 'bebida', 'fernet'];
 const FORM_VACIO = { nombre: '', hora_inicio: '', hora_fin: '', precio_entrada: '', comidas: [], ajustes: {} };
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-
-function estaActivo(ev) {
-  const ahora = new Date();
-  const min = ahora.getHours() * 60 + ahora.getMinutes();
-  const [h1, m1] = ev.hora_inicio.split(':').map(Number);
-  const [h2, m2] = ev.hora_fin.split(':').map(Number);
-  return min >= h1 * 60 + m1 && min <= h2 * 60 + m2;
-}
 
 export default function VistaEventos({ productos, eventos, mostrarNotif }) {
   const hoy = new Date();
@@ -172,7 +164,7 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
       )}
 
       {eventosDelMes.map(ev => {
-        const activo = ev.fecha === fechaLocal() && estaActivo(ev);
+        const activo = eventoEstaActivo(ev);
         const esHoy  = ev.fecha === fechaLocal();
         return (
           <div key={ev.id} className="bg-white rounded-2xl p-4 border border-stone-100 space-y-2">
@@ -185,7 +177,7 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
                 <p className="text-stone-400 text-xs mt-0.5">
                   {!esHoy && `${ev.fecha.slice(8,10)}/${ev.fecha.slice(5,7)} · `}
                   {ev.hora_inicio.slice(0,5)} – {ev.hora_fin.slice(0,5)}
-                  {ev.comidas?.length > 0 && ` · ${ev.comidas.length} comida${ev.comidas.length > 1 ? 's' : ''}`}
+                  {ev.comidas?.length > 0 && ` · ${ev.comidas.length} ítem${ev.comidas.length > 1 ? 's' : ''} barra`}
                   {ev.ajustes?.length > 0 && ` · ${ev.ajustes.length} ajuste${ev.ajustes.length > 1 ? 's' : ''}`}
                 </p>
               </div>
@@ -248,9 +240,9 @@ export default function VistaEventos({ productos, eventos, mostrarNotif }) {
               />
             </div>
 
-            {/* Comidas del evento */}
+            {/* Bebidas / Barra del evento */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Comidas del evento</p>
+              <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Bebidas / Barra del evento</p>
               {form.comidas.map((c, i) => (
                 <div key={i} className="flex items-center gap-2 bg-cream rounded-xl px-3 py-2">
                   <span className="flex-1 text-sm text-stone-700 truncate">{c.nombre}</span>
