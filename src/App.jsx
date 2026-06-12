@@ -59,8 +59,9 @@ export default function App() {
   const cerrarNotif  = useCallback(() => setNotif(null), []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setUserMode('admin');
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) supabase.auth.signOut();
+      else if (data.session) setUserMode('admin');
     });
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
