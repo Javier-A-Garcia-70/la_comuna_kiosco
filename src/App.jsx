@@ -23,7 +23,7 @@ async function conRetry(fn, intentos = 3) {
 
 export default function App() {
   const [userMode, setUserMode] = useState(() => localStorage.getItem('userMode') || null);
-  const [currentPath, setCurrentPath] = useState(() => localStorage.getItem('currentPath') || '/barra');
+  const [currentPath, setCurrentPath] = useState(() => localStorage.getItem('currentPath') || '/entrada');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [productos, setProductos] = useState([]);
   const [ventasEnVivo, setVentasEnVivo] = useState([]);
@@ -158,19 +158,19 @@ export default function App() {
 
   // El invitado no puede quedar en una ruta de admin tras refrescar
   useEffect(() => {
-    if (userMode === 'guest' && !['/barra', '/entrada'].includes(currentPath)) setCurrentPath('/barra');
+    if (userMode === 'guest' && !['/barra', '/entrada'].includes(currentPath)) setCurrentPath('/entrada');
   }, [userMode, currentPath]);
 
   const navegar  = (path) => { setCurrentPath(path); setSidebarOpen(false); };
-  const salir    = async () => { await supabase.auth.signOut(); localStorage.removeItem('userMode'); setUserMode(null); setCurrentPath('/barra'); };
+  const salir    = async () => { await supabase.auth.signOut(); localStorage.removeItem('userMode'); setUserMode(null); setCurrentPath('/entrada'); };
 
   const rutas = userMode === 'admin'
-    ? [{ path:'/barra', label:'Barra', icon:'🍺' }, { path:'/entrada', label:'Entrada', icon:'🎟️' }, { path:'/eventos', label:'Eventos', icon:'🎉' }, { path:'/admin', label:'Ventas', icon:'📊' }, { path:'/stock', label:'Stock', icon:'📦' }]
-    : [{ path:'/barra', label:'Barra', icon:'🍺' }, { path:'/entrada', label:'Entrada', icon:'🎟️' }];
+    ? [{ path:'/entrada', label:'Entrada', icon:'🎟️' }, { path:'/barra', label:'Barra', icon:'🍺' }, { path:'/eventos', label:'Eventos', icon:'🎉' }, { path:'/admin', label:'Ventas', icon:'📊' }, { path:'/stock', label:'Stock', icon:'📦' }]
+    : [{ path:'/entrada', label:'Entrada', icon:'🎟️' }, { path:'/barra', label:'Barra', icon:'🍺' }];
 
   if (!userMode) return (
     <>
-      <Landing onGuest={() => { localStorage.setItem('userMode', 'guest'); setUserMode('guest'); setCurrentPath('/barra'); }} />
+      <Landing onGuest={() => { localStorage.setItem('userMode', 'guest'); setUserMode('guest'); setCurrentPath('/entrada'); }} />
       <Toast notif={notif} onClose={cerrarNotif} />
     </>
   );
