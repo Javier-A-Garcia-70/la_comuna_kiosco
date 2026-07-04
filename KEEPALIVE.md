@@ -123,11 +123,13 @@ Run.
   de 7 días pero no superó el umbral de "sufficient activity" — ver la nota al
   inicio. Si Supabase endurece el criterio de nuevo, lo próximo sería sumar más
   requests por corrida.
-- **GitHub desactiva los crons tras ~60 días sin actividad en el repo**: manda
-  un mail de aviso ("scheduled workflow disabled") y el workflow deja de correr
-  en silencio. Se reactiva con un click en la pestaña Actions o con cualquier
-  commit. Es el otro modo de falla silenciosa de esta solución: si el proyecto
-  entra en mantenimiento pasivo, ojo con ese mail.
+- **GitHub desactiva los crons tras ~60 días sin actividad en el repo** — pero
+  este workflow lo tiene resuelto: su último paso llama a la API de GitHub para
+  re-habilitarse a sí mismo (`gh workflow enable`), lo que resetea el contador
+  de 60 días en cada corrida diaria. No hace falta commitear nunca. Requiere el
+  permiso `actions: write` declarado en el workflow. Si igual llegara un mail
+  "scheduled workflow disabled" (p. ej. porque el workflow estuvo fallando
+  mucho tiempo), se reactiva con un click en la pestaña Actions.
 - **No es 100% garantizado**: si Supabase pausa igual, el proyecto NO se
   reactiva solo — hay que hacerlo a mano desde el dashboard.
 - **Si el proyecto YA está pausado**, hay que reactivarlo una vez a mano desde el
